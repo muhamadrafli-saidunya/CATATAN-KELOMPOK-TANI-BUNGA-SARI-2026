@@ -16,6 +16,7 @@ import {
   CheckCircle2, 
   Clock, 
   TrendingDown, 
+  TrendingUp,
   MapPin, 
   Layers, 
   PlusCircle,
@@ -27,7 +28,8 @@ import {
   Settings,
   ShieldCheck,
   AlertCircle,
-  Plus
+  Plus,
+  Coins
 } from 'lucide-react';
 import { 
   formatRupiah, 
@@ -239,14 +241,32 @@ export const ArmadaView: React.FC<ArmadaViewProps> = ({
   const grandTotalDimuatKg = filteredArmada.reduce((sum, a) => sum + a.totalDimuatKg, 0);
   const grandTotalPksKg = filteredArmada.reduce((sum, a) => sum + a.totalPksKg, 0);
   const grandTotalSelisihKg = grandTotalDimuatKg - grandTotalPksKg;
-  const grandTotalMedaranKg = grandTotalPksKg - grandTotalDimuatKg; // Hasil timbangan pabrik - hasil timbangan kebun
-  const grandAvgSusut = grandTotalDimuatKg > 0 ? ((Math.abs(grandTotalMedaranKg) / grandTotalDimuatKg) * 100).toFixed(2) : '0';
+  // Tonase MEDARAN: Hasil Timbangan Pabrik dikurang Total Timbangan di Muat
+  const grandTotalMedaranKg = grandTotalPksKg - grandTotalDimuatKg;
+  const grandAvgSusut = grandTotalDimuatKg > 0 ? ((grandTotalMedaranKg / grandTotalDimuatKg) * 100).toFixed(2) : '0';
   const grandTotalBruto = filteredArmada.reduce((sum, a) => sum + a.totalBruto, 0);
-  const grandTotalMedaranRupiah = filteredArmada.reduce((sum, a) => {
-    const medaranKg = Math.max(0, a.totalDimuatKg - a.totalPksKg);
-    const hargaTbs = a.panenRecords.length > 0 ? (a.panenRecords[0].hargaTbsPerKg || 2780) : 2780;
-    return sum + (medaranKg * hargaTbs);
-  }, 0);
+
+  // Hasil penjumlahan MEDARAN dikali harga periodik manen
+  const grandTotalMedaranRupiah = useMemo(() => {
+    return filteredArmada.reduce((sum, a) => {
+      // Hitung per record panen: (timbangan pabrik - timbangan muat) * harga periodik manen
+      const ritRupiah = a.panenRecords.reduce((rSum, r) => {
+        const dimuat = r.timbanganRamKg > 0 ? r.timbanganRamKg : (r.timbanganPksKg || 0);
+        const pksKg = r.timbanganPksKg > 0 ? r.timbanganPksKg : (r.timbanganRamKg || 0);
+        const medaranKg = pksKg - dimuat;
+        const harga = r.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780;
+        return rSum + (medaranKg * harga);
+      }, 0);
+
+      if (a.panenRecords.length > 0) {
+        return sum + ritRupiah;
+      }
+
+      const groupMedaran = a.totalPksKg - a.totalDimuatKg;
+      const groupHarga = a.panenRecords[0]?.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780;
+      return sum + (groupMedaran * groupHarga);
+    }, 0);
+  }, [filteredArmada, pengaturan.hargaTbsDefault]);
 
   const toggleExpand = (id: string) => {
     setExpandedArmadaId(prev => (prev === id ? null : id));
@@ -419,7 +439,7 @@ Estimasi Nilai Bruto: ${formatRupiah(armada.totalBruto)}
       {activeSubTab === 'monitoring' && (
         <div className="space-y-6">
           {/* KPI Cards for Armada Monitoring */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             
             {/* Card 1: Total Armada & Rit */}
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
@@ -475,28 +495,70 @@ Estimasi Nilai Bruto: ${formatRupiah(armada.totalBruto)}
               </div>
             </div>
 
-            {/* Card 4: Medaran (Hasil Timbangan Pabrik - Hasil Timbangan Kebun) */}
+            {/* Card 4: MEDARAN (Hasil Timbangan Pabrik - Total Timbangan di Muat) */}
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Medaran</span>
-                  <span className="text-[10px] text-slate-400">Pabrik - Kebun</span>
+                  <span className={cn(
+                    "text-[11px] font-bold uppercase tracking-wider block",
+                    grandTotalMedaranKg < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                  )}>
+                    MEDARAN
+                  </span>
+                  <span className="text-[10px] text-slate-400">Pabrik - Total Dimuat</span>
                 </div>
-                <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-                  <TrendingDown className="w-4 h-4" />
+                <div className={cn(
+                  "w-7 h-7 rounded-lg flex items-center justify-center",
+                  grandTotalMedaranKg < 0 
+                    ? "bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400" 
+                    : "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
+                )}>
+                  {grandTotalMedaranKg < 0 ? (
+                    <TrendingDown className="w-4 h-4" />
+                  ) : (
+                    <TrendingUp className="w-4 h-4" />
+                  )}
                 </div>
               </div>
               <div className="mt-2">
-                <div className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono">
-                  {formatKg(grandTotalMedaranKg)}
+                <div className={cn(
+                  "text-xl sm:text-2xl font-bold font-mono",
+                  grandTotalMedaranKg < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                )}>
+                  {grandTotalMedaranKg > 0 ? `+${formatKg(grandTotalMedaranKg)}` : formatKg(grandTotalMedaranKg)}
                 </div>
                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center justify-between">
-                  <span>Pabrik - Kebun: <strong className="text-slate-700 dark:text-slate-200 font-mono">{formatTon(grandTotalMedaranKg)}</strong></span>
-                  <span className="font-semibold text-rose-500">({grandAvgSusut}%)</span>
+                  <span>Tonase: <strong className="text-slate-700 dark:text-slate-200 font-mono">{formatTon(grandTotalMedaranKg)}</strong></span>
+                  <span className={cn(
+                    "font-semibold",
+                    grandTotalMedaranKg < 0 ? "text-rose-500" : "text-emerald-500"
+                  )}>
+                    ({grandAvgSusut}%)
+                  </span>
                 </div>
-                <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-                  <span className="text-emerald-700 dark:text-emerald-400 font-medium">Kas Masuk Medaran:</span>
-                  <strong className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">+{formatRupiah(grandTotalMedaranRupiah)}</strong>
+              </div>
+            </div>
+
+            {/* Card 5: NOMINAL MEDARAN */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-slate-900 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/80 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block">NOMINAL MEDARAN</span>
+                  <span className="text-[10px] text-emerald-600/90 dark:text-emerald-400/90">Medaran × Harga Panen</span>
+                </div>
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shadow-2xs">
+                  <Coins className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <div className={cn(
+                  "text-xl sm:text-2xl font-bold font-mono",
+                  grandTotalMedaranRupiah < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-300"
+                )}>
+                  {grandTotalMedaranRupiah > 0 ? `+${formatRupiah(grandTotalMedaranRupiah)}` : formatRupiah(grandTotalMedaranRupiah)}
+                </div>
+                <div className="text-xs text-emerald-700/90 dark:text-emerald-300/90 mt-0.5 flex items-center justify-between">
+                  <span>Hasil {formatKg(grandTotalMedaranKg)} × Harga Periode</span>
                 </div>
               </div>
             </div>
