@@ -196,8 +196,9 @@ export const EditTimbanganPksModal: React.FC<EditTimbanganPksModalProps> = ({
   // Calculate live totals for the modal
   const sumDimuatKg = farmerInputs.reduce((sum, item) => sum + item.timbanganRamKg, 0);
   const sumPksKg = farmerInputs.reduce((sum, item) => sum + item.timbanganPksKg, 0);
-  const sumSelisihKg = Math.max(0, sumDimuatKg - sumPksKg);
-  const susutPersen = sumDimuatKg > 0 ? Number(((sumSelisihKg / sumDimuatKg) * 100).toFixed(2)) : 0;
+  // Medaran: total netto pks dikurangi total muatan kebun
+  const sumMedaranKg = sumPksKg - sumDimuatKg;
+  const medaranPersen = sumDimuatKg > 0 ? Number(((sumMedaranKg / sumDimuatKg) * 100).toFixed(2)) : 0;
   
   const sumBruto = farmerInputs.reduce((sum, item) => sum + (item.timbanganPksKg * item.hargaTbsPerKg), 0);
 
@@ -292,9 +293,17 @@ export const EditTimbanganPksModal: React.FC<EditTimbanganPksModalProps> = ({
             </div>
             <div className="w-px h-7 bg-slate-200 dark:bg-slate-700" />
             <div>
-              <span className="text-[10px] uppercase font-bold text-amber-600 block">Susut Jalan</span>
-              <strong className="text-sm font-bold text-amber-600 font-mono">
-                -{formatKg(sumSelisihKg)} ({susutPersen}%)
+              <span className={cn(
+                "text-[10px] uppercase font-bold block",
+                sumMedaranKg < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+              )}>
+                Medaran
+              </span>
+              <strong className={cn(
+                "text-sm font-bold font-mono",
+                sumMedaranKg < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+              )}>
+                {sumMedaranKg > 0 ? `+${formatKg(sumMedaranKg)}` : formatKg(sumMedaranKg)} ({sumMedaranKg > 0 ? `+${medaranPersen}` : medaranPersen}%)
               </strong>
             </div>
           </div>
@@ -370,11 +379,17 @@ export const EditTimbanganPksModal: React.FC<EditTimbanganPksModalProps> = ({
             <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                  Kalkulasi Susut Muatan Rit
+                  Kalkulasi Medaran Muatan Rit
                 </span>
-                <p className="text-base font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5">
-                  -{formatKg(sumSelisihKg)} ({susutPersen}%)
+                <p className={cn(
+                  "text-base font-black font-mono mt-0.5",
+                  sumMedaranKg < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                )}>
+                  {sumMedaranKg > 0 ? `+${formatKg(sumMedaranKg)}` : formatKg(sumMedaranKg)} ({sumMedaranKg > 0 ? `+${medaranPersen}` : medaranPersen}%)
                 </p>
+                <span className="text-[10px] text-slate-400 block mt-0.5">
+                  Total Netto PKS − Muatan Kebun
+                </span>
               </div>
               <button
                 type="button"
@@ -416,16 +431,16 @@ export const EditTimbanganPksModal: React.FC<EditTimbanganPksModalProps> = ({
                     <th className="p-3 w-36 text-center">Alokasi PKS (Kg) *</th>
                     <th className="p-3 w-28 text-center">Harga (Rp)</th>
                     <th className="p-3 w-24 text-center">Sortasi (Kg)</th>
-                    <th className="p-3 text-right">Susut Porsi</th>
+                    <th className="p-3 text-right">Medaran Porsi</th>
                     <th className="p-3 pr-4 text-right">Nilai Bruto</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {farmerInputs.map((input, idx) => {
                     const isFocused = focusedPanenId === input.recordId;
-                    const farmerSelisih = Math.max(0, input.timbanganRamKg - input.timbanganPksKg);
-                    const farmerSusutPersen = input.timbanganRamKg > 0 
-                      ? ((farmerSelisih / input.timbanganRamKg) * 100).toFixed(1) 
+                    const farmerMedaran = input.timbanganPksKg - input.timbanganRamKg;
+                    const farmerMedaranPersen = input.timbanganRamKg > 0 
+                      ? ((farmerMedaran / input.timbanganRamKg) * 100).toFixed(1) 
                       : '0.0';
                     const farmerBruto = input.timbanganPksKg * input.hargaTbsPerKg;
 
@@ -493,12 +508,12 @@ export const EditTimbanganPksModal: React.FC<EditTimbanganPksModalProps> = ({
                         <td className="p-3 text-right font-mono">
                           <span className={cn(
                             "font-bold text-xs",
-                            farmerSelisih > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600"
+                            farmerMedaran < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
                           )}>
-                            -{formatKg(farmerSelisih)}
+                            {farmerMedaran > 0 ? `+${formatKg(farmerMedaran)}` : formatKg(farmerMedaran)}
                           </span>
                           <span className="block text-[10px] text-slate-400">
-                            ({farmerSusutPersen}%)
+                            ({farmerMedaran > 0 ? `+${farmerMedaranPersen}` : farmerMedaranPersen}%)
                           </span>
                         </td>
 
@@ -574,8 +589,13 @@ export const EditTimbanganPksModal: React.FC<EditTimbanganPksModalProps> = ({
               <strong className="text-sm font-mono text-emerald-400">{formatKg(sumPksKg)}</strong>
             </div>
             <div>
-              <span className="text-[10px] text-amber-400 block uppercase font-bold">Susut Pengangkutan</span>
-              <strong className="text-sm font-mono text-amber-400">-{formatKg(sumSelisihKg)} ({susutPersen}%)</strong>
+              <span className="text-[10px] text-slate-400 block uppercase font-bold">Total Medaran</span>
+              <strong className={cn(
+                "text-sm font-mono",
+                sumMedaranKg < 0 ? "text-rose-400" : "text-emerald-400"
+              )}>
+                {sumMedaranKg > 0 ? `+${formatKg(sumMedaranKg)}` : formatKg(sumMedaranKg)} ({sumMedaranKg > 0 ? `+${medaranPersen}` : medaranPersen}%)
+              </strong>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 block uppercase font-bold">Total Nilai Bruto</span>
