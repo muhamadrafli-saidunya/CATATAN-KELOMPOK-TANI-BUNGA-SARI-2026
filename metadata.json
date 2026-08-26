@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix Remix Laporan Kelompok Tani",
+  "description": "Sistem Informasi Laporan Keuangan, Rekapitulasi Panen Sawit, Analisis Selisih Tonase \u0026 Cetak Slip Pembayaran Kelompok Tani Bunga Sari.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
