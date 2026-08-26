@@ -367,10 +367,10 @@ export const KasView: React.FC = () => {
             </div>
 
             <div className="bg-emerald-500/10 dark:bg-emerald-950/30 p-5 rounded-xl border border-emerald-500/30 shadow-sm">
-              <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400 tracking-wider">Pemasukan Medaran (Armada)</span>
+              <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400 tracking-wider">Arus Kas Masuk: Nominal Medaran</span>
               <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">+{formatRupiah(totalMedaranMasuk)}</p>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block font-medium">
-                {jmlTransaksiMedaran} rit armada otomatis (Kg Medaran × Harga TBS Periode)
+                Otomatis dari Monitoring Pengangkutan ({jmlTransaksiMedaran} rit armada @ Medaran × Harga Panen)
               </span>
             </div>
 
