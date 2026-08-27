@@ -55,6 +55,7 @@ export const PanenView: React.FC<PanenViewProps> = ({ onOpenAddPanen, onOpenEdit
   const [selectedPetaniFilter, setSelectedPetaniFilter] = useState<string>(
     userRole === 'petani' && activePetaniId ? activePetaniId : 'all'
   );
+  const [selectedTanggalFilter, setSelectedTanggalFilter] = useState<string>('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
   const [filterSusutTinggiOnly, setFilterSusutTinggiOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'tanggal-desc' | 'tanggal-asc' | 'tonase-desc' | 'netto-desc'>('tanggal-desc');
@@ -63,6 +64,12 @@ export const PanenView: React.FC<PanenViewProps> = ({ onOpenAddPanen, onOpenEdit
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Available unique dates
+  const availableDates = useMemo(() => {
+    const dates = Array.from(new Set(panenList.map(p => p.tanggal))).sort((a: string, b: string) => b.localeCompare(a));
+    return dates;
+  }, [panenList]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,10 +94,13 @@ export const PanenView: React.FC<PanenViewProps> = ({ onOpenAddPanen, onOpenEdit
       // Petani Filter
       const matchPetani = selectedPetaniFilter === 'all' || item.petaniId === selectedPetaniFilter;
 
+      // Tanggal Filter
+      const matchTanggal = selectedTanggalFilter === 'all' || item.tanggal === selectedTanggalFilter;
+
       // Status Filter
       const matchStatus = selectedStatusFilter === 'all' || item.statusPembayaran === selectedStatusFilter;
 
-      return matchSearch && matchPetani && matchStatus;
+      return matchSearch && matchPetani && matchTanggal && matchStatus;
     }).sort((a, b) => {
       if (sortBy === 'tanggal-desc') return new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime();
       if (sortBy === 'tanggal-asc') return new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime();
@@ -98,7 +108,7 @@ export const PanenView: React.FC<PanenViewProps> = ({ onOpenAddPanen, onOpenEdit
       if (sortBy === 'netto-desc') return b.totalNetto - a.totalNetto;
       return 0;
     });
-  }, [panenList, searchQuery, selectedPetaniFilter, selectedStatusFilter, sortBy, userRole, activePetaniId]);
+  }, [panenList, searchQuery, selectedPetaniFilter, selectedTanggalFilter, selectedStatusFilter, sortBy, userRole, activePetaniId]);
 
   // Paginated Slices
   const totalPages = Math.ceil(filteredPanen.length / itemsPerPage) || 1;
@@ -272,7 +282,7 @@ export const PanenView: React.FC<PanenViewProps> = ({ onOpenAddPanen, onOpenEdit
 
       {/* Filter Toolbar Bento Card */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           
           {/* Search Box */}
           <div className="lg:col-span-2 relative">
@@ -287,6 +297,25 @@ export const PanenView: React.FC<PanenViewProps> = ({ onOpenAddPanen, onOpenEdit
               placeholder="Cari No. SPB, Nama Petani, Plat Truk, PKS..."
               className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-green-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none"
             />
+          </div>
+
+          {/* Tanggal Panen Filter */}
+          <div>
+            <select
+              value={selectedTanggalFilter}
+              onChange={(e) => {
+                setSelectedTanggalFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
+            >
+              <option value="all">Semua Tanggal Panen</option>
+              {availableDates.map(d => (
+                <option key={d} value={d}>
+                  {formatTanggalPendek(d)}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Petani Filter */}

@@ -367,14 +367,14 @@ _Ketua: ${pengaturan.ketua}_`;
             <div>
               <p className="text-gray-500">Bendahara Kelompok,</p>
               <div className="h-16 flex items-end justify-center">
-                <span className="font-bold underline">{pengaturan.bendahara}</span>
+                <span className="font-bold underline">{pengaturan.namaBendahara || pengaturan.bendahara}</span>
               </div>
             </div>
 
             <div>
               <p className="text-gray-500">Ketua Kelompok Tani,</p>
               <div className="h-16 flex items-end justify-center">
-                <span className="font-bold underline">{pengaturan.ketua}</span>
+                <span className="font-bold underline">{pengaturan.namaKetua || pengaturan.ketua}</span>
               </div>
             </div>
           </div>

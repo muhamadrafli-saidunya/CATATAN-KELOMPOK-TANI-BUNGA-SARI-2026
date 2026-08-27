@@ -401,73 +401,137 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
         </div>
 
         {/* Filter Controls Row */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3">
           
-          {/* Sisi Kiri: Filter Periode / Tanggal */}
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {rekapMode === 'petani' ? (
-              /* FILTER PERIODE BULAN */
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
-                  <Calendar className="w-4 h-4 text-green-600 dark:text-green-500" />
-                  <span>Periode Rekap:</span>
+          {/* Main Selectors Row */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+            {/* Sisi Kiri: Filter Periode / Tanggal */}
+            <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+              {rekapMode === 'petani' ? (
+                /* FILTER PERIODE BULAN */
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                    <Calendar className="w-4 h-4 text-green-600 dark:text-green-500" />
+                    <span>Periode Rekap:</span>
+                  </div>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
+                  >
+                    <option value="all">Semua Periode (1 Tahun Penuh)</option>
+                    {periodeBulanList.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
-                >
-                  <option value="all">Semua Periode (1 Tahun Penuh)</option>
-                  {periodeBulanList.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              /* FILTER REKAP PER TANGGAL PANEN */
-              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
-                  <CalendarDays className="w-4 h-4 text-green-600 dark:text-green-500" />
-                  <span>Pilih Tanggal Panen:</span>
-                </div>
-                <select
-                  value={selectedTanggalPanen}
-                  onChange={(e) => setSelectedTanggalPanen(e.target.value)}
-                  className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
-                >
-                  <option value="all">Semua Tanggal Panen ({panenList.length} SPB)</option>
-                  {tanggalPanenOptions.map((opt) => (
-                    <option key={opt.date} value={opt.date}>
-                      {opt.label} • {opt.count} Petani ({formatKg(opt.totalPks)})
-                    </option>
-                  ))}
-                </select>
+              ) : (
+                /* FILTER REKAP PER TANGGAL PANEN */
+                <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                    <CalendarDays className="w-4 h-4 text-green-600 dark:text-green-500" />
+                    <span>Pilihan Tanggal Panen:</span>
+                  </div>
 
-                <select
-                  value={statusFilterTanggal}
-                  onChange={(e) => setStatusFilterTanggal(e.target.value)}
-                  className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 outline-none cursor-pointer"
-                >
-                  <option value="all">Semua Status Bayar</option>
-                  <option value="Siap Bayar">Siap Bayar</option>
-                  <option value="Lunas">Lunas</option>
-                </select>
-              </div>
-            )}
+                  {/* Dropdown Tanggal Panen Tercatat */}
+                  <select
+                    value={selectedTanggalPanen}
+                    onChange={(e) => setSelectedTanggalPanen(e.target.value)}
+                    className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none cursor-pointer max-w-[240px] truncate"
+                  >
+                    <option value="all">Semua Tanggal Panen ({panenList.length} SPB)</option>
+                    {tanggalPanenOptions.map((opt) => (
+                      <option key={opt.date} value={opt.date}>
+                        {opt.label} • {opt.count} SPB ({formatKg(opt.totalPks)})
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Input Kalender Tanggal */}
+                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase">Pilih:</span>
+                    <input
+                      type="date"
+                      value={selectedTanggalPanen === 'all' ? '' : selectedTanggalPanen}
+                      onChange={(e) => setSelectedTanggalPanen(e.target.value || 'all')}
+                      className="bg-transparent text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Filter Status Bayar */}
+                  <select
+                    value={statusFilterTanggal}
+                    onChange={(e) => setStatusFilterTanggal(e.target.value)}
+                    className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 outline-none cursor-pointer"
+                  >
+                    <option value="all">Semua Status Bayar</option>
+                    <option value="Siap Bayar">Siap Bayar</option>
+                    <option value="Lunas">Lunas</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Sisi Kanan: Search Bar */}
+            <div className="w-full md:w-72 shrink-0">
+              <input
+                type="text"
+                value={rekapMode === 'petani' ? searchPetani : searchTanggalQuery}
+                onChange={(e) => rekapMode === 'petani' ? setSearchPetani(e.target.value) : setSearchTanggalQuery(e.target.value)}
+                placeholder={rekapMode === 'petani' ? "Cari nama petani atau blok..." : "Cari petani, no SPB, atau truk..."}
+                className="w-full px-3.5 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none"
+              />
+            </div>
           </div>
 
-          {/* Sisi Kanan: Search Bar */}
-          <div className="w-full md:w-72">
-            <input
-              type="text"
-              value={rekapMode === 'petani' ? searchPetani : searchTanggalQuery}
-              onChange={(e) => rekapMode === 'petani' ? setSearchPetani(e.target.value) : setSearchTanggalQuery(e.target.value)}
-              placeholder={rekapMode === 'petani' ? "Cari nama petani atau blok..." : "Cari petani, no SPB, atau truk..."}
-              className="w-full px-3.5 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none"
-            />
-          </div>
+          {/* Quick Date Shortcuts Bar (Pilihan Cepat Tanggal Panen) */}
+          {rekapMode === 'tanggal' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-thin text-xs">
+              <span className="text-[11px] font-bold text-slate-400 shrink-0 mr-1 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>Pilih Cepat:</span>
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setSelectedTanggalPanen('all')}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg font-semibold shrink-0 transition-all cursor-pointer border text-[11px]",
+                  selectedTanggalPanen === 'all'
+                    ? "bg-green-600 border-green-600 text-white shadow-xs"
+                    : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                )}
+              >
+                Semua Tanggal ({panenList.length})
+              </button>
+
+              {tanggalPanenOptions.map((opt) => (
+                <button
+                  key={opt.date}
+                  type="button"
+                  onClick={() => setSelectedTanggalPanen(opt.date)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg font-semibold shrink-0 transition-all cursor-pointer border text-[11px] flex items-center gap-1.5",
+                    selectedTanggalPanen === opt.date
+                      ? "bg-green-600 border-green-600 text-white shadow-xs"
+                      : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  )}
+                >
+                  <span>{formatTanggalPendek(opt.date)}</span>
+                  <span className={cn(
+                    "px-1.5 py-0.2 text-[10px] rounded-md font-mono",
+                    selectedTanggalPanen === opt.date
+                      ? "bg-green-700 text-white"
+                      : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                  )}>
+                    {opt.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
