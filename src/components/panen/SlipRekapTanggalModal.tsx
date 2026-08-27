@@ -81,7 +81,11 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
     text += `*RINCIAN HASIL PANEN PETANI:*\n`;
 
     harvests.forEach((h, idx) => {
-      text += `${idx + 1}. *${h.namaPetani}* (${h.blokLahan})\n`;
+      const farmer = petaniList.find(pt => pt.id === h.petaniId);
+      const farmerNama = farmer?.nama || h.petaniNama || 'Petani Sawit';
+      const farmerBlok = farmer?.blokLahan || h.blokLahan || '-';
+
+      text += `${idx + 1}. *${farmerNama}* (${farmerBlok})\n`;
       text += `   - Tonase PKS: ${formatKg(h.timbanganPksKg)} (Ram: ${formatKg(h.timbanganRamKg)})\n`;
       text += `   - Harga TBS : ${formatRupiah(h.hargaTbsPerKg)}/kg\n`;
       text += `   - Bruto     : ${formatRupiah(h.totalBruto)}\n`;
@@ -226,6 +230,9 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
               </thead>
               <tbody className="divide-y divide-gray-300">
                 {harvests.map((h, index) => {
+                  const farmer = petaniList.find(pt => pt.id === h.petaniId);
+                  const farmerNama = farmer?.nama || h.petaniNama || 'Petani Sawit';
+                  const farmerBlok = farmer?.blokLahan || h.blokLahan || '-';
                   const potDetail = h.totalPotongan > 0 
                     ? `Ped: ${formatNumber(h.potonganPedaranRupiah)} | Iuran: ${formatNumber(h.potonganIuranKasRupiah)}` 
                     : '-';
@@ -234,8 +241,8 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
                       <td className="border border-gray-400 p-1.5 text-center font-mono">{index + 1}</td>
                       <td className="border border-gray-400 p-1.5 font-mono font-bold">{h.noSpb}</td>
                       <td className="border border-gray-400 p-1.5 font-semibold">
-                        {h.namaPetani}
-                        <span className="block text-[10px] text-gray-500 font-normal">{h.blokLahan}</span>
+                        <span className="font-bold text-gray-900 block">{farmerNama}</span>
+                        <span className="block text-[10px] text-gray-600 font-normal">{farmerBlok}</span>
                       </td>
                       <td className="border border-gray-400 p-1.5 text-right font-mono">{formatNumber(h.timbanganRamKg)}</td>
                       <td className="border border-gray-400 p-1.5 text-right font-mono font-bold text-gray-900">{formatNumber(h.timbanganPksKg)}</td>

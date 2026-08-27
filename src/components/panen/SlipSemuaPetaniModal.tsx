@@ -95,7 +95,7 @@ export const SlipSemuaPetaniModal: React.FC<SlipSemuaPetaniModalProps> = ({
 *${pengaturan.namaKelompok.toUpperCase()}*
 ---------------------------------------
 Nama Petani : *${petani.nama}*
-Blok Lahan  : ${petani.blokLahan} (${petani.luasLahanHa} Ha)
+Blok Lahan  : ${petani.blokLahan} (${petani.luasHa || (petani as any).luasLahanHa || '-'} Ha)
 Rekening    : ${petani.bank} - ${petani.noRekening}
 Periode     : ${periodeLabel}
 Total SPB   : ${totalRit} Rit Pengiriman
@@ -193,7 +193,7 @@ _Ketua: ${pengaturan.ketua}_`;
                   </tr>
                   <tr>
                     <td className="text-gray-500 py-0.5">Blok / Lahan</td>
-                    <td className="font-semibold text-gray-800 py-0.5">: {petani.blokLahan} ({petani.luasLahanHa} Ha)</td>
+                    <td className="font-semibold text-gray-800 py-0.5">: {petani.blokLahan} ({petani.luasHa || (petani as any).luasLahanHa || '-'} Ha)</td>
                   </tr>
                   <tr>
                     <td className="text-gray-500 py-0.5">Rekening Bank</td>

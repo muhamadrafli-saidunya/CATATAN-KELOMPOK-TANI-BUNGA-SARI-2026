@@ -181,16 +181,20 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
         return false;
       }
       const matchDate = selectedTanggalPanen === 'all' || p.tanggal === selectedTanggalPanen;
+      const farmer = petaniList.find(pt => pt.id === p.petaniId);
+      const farmerNama = farmer?.nama || p.petaniNama || '';
+      const farmerBlok = farmer?.blokLahan || p.blokLahan || '';
+
       const matchSearch = searchTanggalQuery.trim() === '' ||
-        p.namaPetani.toLowerCase().includes(searchTanggalQuery.toLowerCase()) ||
+        farmerNama.toLowerCase().includes(searchTanggalQuery.toLowerCase()) ||
         p.noSpb.toLowerCase().includes(searchTanggalQuery.toLowerCase()) ||
-        p.blokLahan.toLowerCase().includes(searchTanggalQuery.toLowerCase()) ||
+        farmerBlok.toLowerCase().includes(searchTanggalQuery.toLowerCase()) ||
         p.platTruk.toLowerCase().includes(searchTanggalQuery.toLowerCase());
       const matchStatus = statusFilterTanggal === 'all' || p.statusPembayaran === statusFilterTanggal;
 
       return matchDate && matchSearch && matchStatus;
     });
-  }, [panenList, selectedTanggalPanen, searchTanggalQuery, statusFilterTanggal, userRole, activePetaniId]);
+  }, [panenList, petaniList, selectedTanggalPanen, searchTanggalQuery, statusFilterTanggal, userRole, activePetaniId]);
 
   // Totals untuk Tanggal Terpilih
   const totalTanggalRamKg = rekapDataTanggal.reduce((s, p) => s + (p.timbanganRamKg || p.timbanganPksKg || 0), 0);
@@ -256,7 +260,11 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
     text += `*RINCIAN HASIL PANEN PETANI:*\n`;
 
     rekapDataTanggal.forEach((h, idx) => {
-      text += `${idx + 1}. *${h.namaPetani}* (${h.blokLahan})\n`;
+      const farmer = petaniList.find(pt => pt.id === h.petaniId);
+      const farmerNama = farmer?.nama || h.petaniNama || 'Petani Sawit';
+      const farmerBlok = farmer?.blokLahan || h.blokLahan || '-';
+
+      text += `${idx + 1}. *${farmerNama}* (${farmerBlok})\n`;
       text += `   - Tonase PKS: ${formatKg(h.timbanganPksKg)} (Ram: ${formatKg(h.timbanganRamKg)})\n`;
       text += `   - Harga TBS : ${formatRupiah(h.hargaTbsPerKg)}/kg\n`;
       text += `   - Bruto     : ${formatRupiah(h.totalBruto)}\n`;
@@ -784,6 +792,9 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                     {rekapDataTanggal.map((h, index) => {
+                      const farmer = petaniList.find(pt => pt.id === h.petaniId);
+                      const farmerNama = farmer?.nama || h.petaniNama || 'Petani Sawit';
+                      const farmerBlok = farmer?.blokLahan || h.blokLahan || '-';
                       const potTooltip = `Pedaran: ${formatRupiah(h.potonganPedaranRupiah)} | Iuran: ${formatRupiah(h.potonganIuranKasRupiah)} | Upah: ${formatRupiah(h.upahPemanenRupiah)} | Kasbon: ${formatRupiah(h.kasbonPupukRupiah)}`;
                       return (
                         <tr 
@@ -802,8 +813,15 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                           </td>
 
                           <td className="p-3.5">
-                            <p className="font-bold text-slate-900 dark:text-white">{h.namaPetani}</p>
-                            <p className="text-[11px] text-slate-400">{h.blokLahan}</p>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700/50 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center shrink-0">
+                                {farmerNama.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-bold text-slate-900 dark:text-white leading-tight">{farmerNama}</p>
+                                <p className="text-[11px] text-slate-400 font-medium mt-0.5">{farmerBlok}</p>
+                              </div>
+                            </div>
                           </td>
 
                           <td className="p-3.5 text-right font-mono">
