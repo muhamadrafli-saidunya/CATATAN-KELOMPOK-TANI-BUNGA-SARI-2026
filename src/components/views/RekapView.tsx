@@ -24,6 +24,7 @@ import {
   formatTanggalPendek 
 } from '../../lib/utils';
 import { exportPanenToExcel } from '../../lib/excelHelper';
+import { SlipSemuaPetaniModal } from '../panen/SlipSemuaPetaniModal';
 
 export const RekapView: React.FC = () => {
   const { 
@@ -41,6 +42,10 @@ export const RekapView: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
   const [searchPetani, setSearchPetani] = useState('');
   const [expandedPetaniId, setExpandedPetaniId] = useState<string | null>(null);
+  const [selectedPetaniForSlipAll, setSelectedPetaniForSlipAll] = useState<{
+    petani: Petani;
+    harvests: PanenRecord[];
+  } | null>(null);
 
   // Group harvest by Petani
   const rekapData = useMemo(() => {
@@ -343,12 +348,15 @@ export const RekapView: React.FC = () => {
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => setSelectedPanenForSlip(row.harvests[0])}
-                              className="px-2.5 py-1.5 rounded-md text-xs font-bold text-green-600 dark:text-green-400 bg-green-500/10 hover:bg-green-500/20 transition-colors flex items-center gap-1 cursor-pointer"
-                              title="Cetak Slip SPB Terakhir"
+                              onClick={() => setSelectedPetaniForSlipAll({
+                                petani: row.petani,
+                                harvests: row.harvests,
+                              })}
+                              className="px-2.5 py-1.5 rounded-md text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Cetak Slip Semua SPB Petani"
                             >
                               <Printer className="w-3.5 h-3.5" />
-                              <span>Slip</span>
+                              <span>Slip Semua</span>
                             </button>
 
                             {userRole === 'admin' && hasPending && (
@@ -452,6 +460,27 @@ export const RekapView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal Cetak Slip Semua SPB Petani */}
+      {selectedPetaniForSlipAll && (
+        <SlipSemuaPetaniModal
+          isOpen={!!selectedPetaniForSlipAll}
+          onClose={() => setSelectedPetaniForSlipAll(null)}
+          petani={selectedPetaniForSlipAll.petani}
+          harvests={selectedPetaniForSlipAll.harvests}
+          periodeLabel={
+            selectedMonth === 'all' 
+              ? 'Semua Periode' 
+              : selectedMonth === '2026-08' 
+                ? 'Agustus 2026' 
+                : selectedMonth === '2026-07' 
+                  ? 'Juli 2026' 
+                  : selectedMonth === '2026-06' 
+                    ? 'Juni 2026' 
+                    : selectedMonth
+          }
+        />
+      )}
 
     </div>
   );
