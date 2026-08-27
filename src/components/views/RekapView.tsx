@@ -20,7 +20,9 @@ import {
   CalendarDays,
   Clock,
   Layers,
-  ArrowUpDown
+  ArrowUpDown,
+  Building2,
+  Coins
 } from 'lucide-react';
 import { 
   formatRupiah, 
@@ -29,7 +31,9 @@ import {
   formatNumber, 
   formatTanggalPendek,
   getDaftarPilihanBulan,
-  formatBulanTahunIndo
+  formatBulanTahunIndo,
+  formatTon,
+  cn
 } from '../../lib/utils';
 import { exportPanenToExcel } from '../../lib/excelHelper';
 import { SlipSemuaPetaniModal } from '../panen/SlipSemuaPetaniModal';
@@ -122,13 +126,24 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
       });
 
       const totalRit = farmerHarvests.length;
-      const totalRamKg = farmerHarvests.reduce((sum, p) => sum + p.timbanganRamKg, 0);
-      const totalPksKg = farmerHarvests.reduce((sum, p) => sum + p.timbanganPksKg, 0);
-      const totalSelisihKg = farmerHarvests.reduce((sum, p) => sum + p.selisihKg, 0);
+      const totalRamKg = farmerHarvests.reduce((sum, p) => sum + (p.timbanganRamKg || p.timbanganPksKg || 0), 0);
+      const totalPksKg = farmerHarvests.reduce((sum, p) => sum + (p.timbanganPksKg || p.timbanganRamKg || 0), 0);
+      const totalSelisihKg = Math.max(0, totalRamKg - totalPksKg);
       const avgSusutPersen = totalRamKg > 0 ? Number(((totalSelisihKg / totalRamKg) * 100).toFixed(2)) : 0;
 
+      // Tonase MEDARAN: Hasil Timbangan Pabrik/PKS dikurang Total Timbangan Dimuat (samakan dengan Armada & Logistik)
+      const totalMedaranKg = totalPksKg - totalRamKg;
+
+      // NOMINAL MEDARAN: Hasil perkalian MEDARAN dikali harga TBS periodik panen (samakan dengan Armada & Logistik)
+      const totalMedaranRupiah = farmerHarvests.reduce((sum, p) => {
+        const dimuat = p.timbanganRamKg > 0 ? p.timbanganRamKg : (p.timbanganPksKg || 0);
+        const pksKg = p.timbanganPksKg > 0 ? p.timbanganPksKg : (p.timbanganRamKg || 0);
+        const medaran = pksKg - dimuat;
+        const harga = p.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780;
+        return sum + (medaran * harga);
+      }, 0);
+
       const totalBruto = farmerHarvests.reduce((sum, p) => sum + p.totalBruto, 0);
-      const totalPedaranRupiah = farmerHarvests.reduce((sum, p) => sum + p.potonganPedaranRupiah, 0);
       const totalIuranKas = farmerHarvests.reduce((sum, p) => sum + p.potonganIuranKasRupiah, 0);
       const totalUpahPanen = farmerHarvests.reduce((sum, p) => sum + p.upahPemanenRupiah, 0);
       const totalKasbon = farmerHarvests.reduce((sum, p) => sum + p.kasbonPupukRupiah, 0);
@@ -147,7 +162,8 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
         totalSelisihKg,
         avgSusutPersen,
         totalBruto,
-        totalPedaranRupiah,
+        totalMedaranKg,
+        totalMedaranRupiah,
         totalIuranKas,
         totalUpahPanen,
         totalKasbon,
@@ -162,13 +178,15 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
       return item.petani.nama.toLowerCase().includes(searchPetani.toLowerCase()) ||
              item.petani.blokLahan.toLowerCase().includes(searchPetani.toLowerCase());
     });
-  }, [panenList, petaniList, selectedMonth, searchPetani, userRole, activePetaniId]);
+  }, [panenList, petaniList, selectedMonth, searchPetani, userRole, activePetaniId, pengaturan.hargaTbsDefault]);
 
   // Overall Totals Rekap Petani
   const grandTotalRamKg = rekapDataPetani.reduce((s, r) => s + r.totalRamKg, 0);
   const grandTotalPksKg = rekapDataPetani.reduce((s, r) => s + r.totalPksKg, 0);
-  const grandTotalSelisihKg = rekapDataPetani.reduce((s, r) => s + r.totalSelisihKg, 0);
-  const grandAvgSusut = grandTotalRamKg > 0 ? ((grandTotalSelisihKg / grandTotalRamKg) * 100).toFixed(2) : '0';
+  const grandTotalSelisihKg = grandTotalRamKg - grandTotalPksKg;
+  const grandTotalMedaranKg = grandTotalPksKg - grandTotalRamKg;
+  const grandTotalMedaranRupiah = rekapDataPetani.reduce((s, r) => s + r.totalMedaranRupiah, 0);
+  const grandAvgSusut = grandTotalRamKg > 0 ? ((Math.abs(grandTotalMedaranKg) / grandTotalRamKg) * 100).toFixed(2) : '0';
   const grandTotalBruto = rekapDataPetani.reduce((s, r) => s + r.totalBruto, 0);
   const grandTotalPotongan = rekapDataPetani.reduce((s, r) => s + r.totalPotongan, 0);
   const grandTotalNetto = rekapDataPetani.reduce((s, r) => s + r.totalNetto, 0);
@@ -199,8 +217,16 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
   // Totals untuk Tanggal Terpilih
   const totalTanggalRamKg = rekapDataTanggal.reduce((s, p) => s + (p.timbanganRamKg || p.timbanganPksKg || 0), 0);
   const totalTanggalPksKg = rekapDataTanggal.reduce((s, p) => s + (p.timbanganPksKg || p.timbanganRamKg || 0), 0);
-  const totalTanggalSelisihKg = rekapDataTanggal.reduce((s, p) => s + p.selisihKg, 0);
-  const avgTanggalSusut = totalTanggalRamKg > 0 ? ((totalTanggalSelisihKg / totalTanggalRamKg) * 100).toFixed(2) : '0';
+  const totalTanggalSelisihKg = Math.max(0, totalTanggalRamKg - totalTanggalPksKg);
+  const totalTanggalMedaranKg = totalTanggalPksKg - totalTanggalRamKg;
+  const totalTanggalMedaranRp = rekapDataTanggal.reduce((s, p) => {
+    const dimuat = p.timbanganRamKg > 0 ? p.timbanganRamKg : (p.timbanganPksKg || 0);
+    const pksKg = p.timbanganPksKg > 0 ? p.timbanganPksKg : (p.timbanganRamKg || 0);
+    const medaran = pksKg - dimuat;
+    const harga = p.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780;
+    return s + (medaran * harga);
+  }, 0);
+  const avgTanggalSusut = totalTanggalRamKg > 0 ? ((Math.abs(totalTanggalMedaranKg) / totalTanggalRamKg) * 100).toFixed(2) : '0';
   const totalTanggalBruto = rekapDataTanggal.reduce((s, p) => s + p.totalBruto, 0);
   const totalTanggalPotongan = rekapDataTanggal.reduce((s, p) => s + p.totalPotongan, 0);
   const totalTanggalNetto = rekapDataTanggal.reduce((s, p) => s + p.totalNetto, 0);
@@ -263,22 +289,28 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
       const farmer = petaniList.find(pt => pt.id === h.petaniId);
       const farmerNama = farmer?.nama || h.petaniNama || 'Petani Sawit';
       const farmerBlok = farmer?.blokLahan || h.blokLahan || '-';
+      const dimuat = h.timbanganRamKg > 0 ? h.timbanganRamKg : (h.timbanganPksKg || 0);
+      const pksKg = h.timbanganPksKg > 0 ? h.timbanganPksKg : (h.timbanganRamKg || 0);
+      const medaranKg = pksKg - dimuat;
+      const harga = h.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780;
+      const nomMedaran = medaranKg * harga;
 
       text += `${idx + 1}. *${farmerNama}* (${farmerBlok})\n`;
-      text += `   - Tonase PKS: ${formatKg(h.timbanganPksKg)} (Ram: ${formatKg(h.timbanganRamKg)})\n`;
-      text += `   - Harga TBS : ${formatRupiah(h.hargaTbsPerKg)}/kg\n`;
-      text += `   - Bruto     : ${formatRupiah(h.totalBruto)}\n`;
-      text += `   - Potongan  : -${formatRupiah(h.totalPotongan)}\n`;
-      text += `   - *NETTO*   : *${formatRupiah(h.totalNetto)}* [${h.statusPembayaran}]\n\n`;
+      text += `   - Dimuat Kebun  : ${formatKg(dimuat)}\n`;
+      text += `   - Hasil Pabrik  : ${formatKg(pksKg)}\n`;
+      text += `   - Harga TBS     : ${formatRupiah(harga)}/kg\n`;
+      text += `   - Medaran (Kg)  : ${medaranKg > 0 ? '+' : ''}${formatKg(medaranKg)}\n`;
+      text += `   - Nom. Medaran  : ${nomMedaran > 0 ? '+' : ''}${formatRupiah(nomMedaran)}\n`;
+      text += `   - *NETTO PETANI*: *${formatRupiah(h.totalNetto)}* [${h.statusPembayaran}]\n\n`;
     });
 
     text += `------------------------------------\n`;
     text += `*TOTAL KESELURUHAN TANGGAL INI:*\n`;
-    text += `• Total Tonase Ram : ${formatKg(totalTanggalRamKg)}\n`;
-    text += `• Total Tonase PKS : ${formatKg(totalTanggalPksKg)}\n`;
-    text += `• Rata-rata Harga  : ${formatRupiah(avgHargaTanggal)}/kg\n`;
-    text += `• Total Bruto      : ${formatRupiah(totalTanggalBruto)}\n`;
-    text += `• Total Potongan   : -${formatRupiah(totalTanggalPotongan)}\n`;
+    text += `• Total Dimuat Kebun   : ${formatKg(totalTanggalRamKg)}\n`;
+    text += `• Hasil Timbangan PKS  : ${formatKg(totalTanggalPksKg)}\n`;
+    text += `• Rata-rata Harga TBS  : ${formatRupiah(avgHargaTanggal)}/kg\n`;
+    text += `• Total Medaran (Kg)   : ${totalTanggalMedaranKg > 0 ? '+' : ''}${formatKg(totalTanggalMedaranKg)}\n`;
+    text += `• TOTAL MEDARAN NOMINAL: ${totalTanggalMedaranRp > 0 ? '+' : ''}${formatRupiah(totalTanggalMedaranRp)}\n`;
     text += `• *TOTAL NETTO DIBAYAR:* *${formatRupiah(totalTanggalNetto)}*\n\n`;
     text += `_Dokumen Resmi ${pengaturan.namaKelompok}_`;
 
@@ -447,25 +479,49 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
           {/* Grand Summary KPI Bento Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Tonase PKS Netto</p>
-              <p className="text-xl font-black text-green-600 dark:text-green-400 font-mono mt-1">{formatKg(grandTotalPksKg)}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Ram Kebun: {formatKg(grandTotalRamKg)}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Timbangan Dimuat</p>
+                <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+                  <Scale className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <p className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">{formatKg(grandTotalRamKg)}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Setara {formatTon(grandTotalRamKg)} timbangan kebun</p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Bruto Panen</p>
-              <p className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">{formatRupiah(grandTotalBruto)}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Rata-rata Harga TBS</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Hasil Timbangan Pabrik/PKS</p>
+                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                  <Building2 className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">{formatKg(grandTotalPksKg)}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Netto pabrik: {formatTon(grandTotalPksKg)}</p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Seluruh Potongan</p>
-              <p className="text-xl font-black text-rose-600 dark:text-rose-400 font-mono mt-1">-{formatRupiah(grandTotalPotongan)}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Iuran, Upah, Kasbon</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Medaran Nominal</p>
+                <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+                  <Coins className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <p className={`text-xl font-black font-mono mt-1 ${grandTotalMedaranRupiah < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                {grandTotalMedaranRupiah > 0 ? `+${formatRupiah(grandTotalMedaranRupiah)}` : formatRupiah(grandTotalMedaranRupiah)}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Tonase: {grandTotalMedaranKg > 0 ? '+' : ''}{formatKg(grandTotalMedaranKg)} ({grandAvgSusut}%)
+              </p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Netto Dibayarkan</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Netto Dibayarkan</p>
+                <div className="p-1.5 rounded-lg bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-400">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+              </div>
               <p className="text-xl font-black text-green-600 dark:text-green-400 font-mono mt-1">{formatRupiah(grandTotalNetto)}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">Iuran Kas: +{formatRupiah(grandTotalIuran)}</p>
             </div>
@@ -490,11 +546,11 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                   <tr>
                     <th className="p-3.5 pl-6">Nama Petani & Blok Lahan</th>
                     <th className="p-3.5 text-center">Rit SPB</th>
-                    <th className="p-3.5 text-right">Tonase Ram (Kg)</th>
-                    <th className="p-3.5 text-right">Tonase PKS (Kg)</th>
+                    <th className="p-3.5 text-right">Timbangan Dimuat (Ram)</th>
+                    <th className="p-3.5 text-right font-bold text-slate-900 dark:text-white">Hasil Timbangan Pabrik/PKS</th>
                     <th className="p-3.5 text-right">Susut (%)</th>
-                    <th className="p-3.5 text-right">Total Bruto</th>
-                    <th className="p-3.5 text-right">Total Potongan</th>
+                    <th className="p-3.5 text-right text-amber-600 dark:text-amber-400">Medaran (Kg)</th>
+                    <th className="p-3.5 text-right font-bold text-slate-900 dark:text-white">Total Medaran Nominal</th>
                     <th className="p-3.5 text-right font-bold text-green-600 dark:text-green-400">Netto Petani</th>
                     <th className="p-3.5 text-center">Status</th>
                     <th className="p-3.5 pr-6 text-center">Aksi Slip</th>
@@ -553,14 +609,15 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                             </span>
                           </td>
 
-                          <td className="p-3.5 text-right font-mono font-bold text-slate-900 dark:text-white">
-                            {formatRupiah(row.totalBruto)}
+                          <td className="p-3.5 text-right font-mono font-bold">
+                            <span className={row.totalMedaranKg < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
+                              {row.totalMedaranKg > 0 ? '+' : ''}{formatNumber(row.totalMedaranKg)} kg
+                            </span>
                           </td>
 
-                          <td className="p-3.5 text-right font-mono text-rose-600 dark:text-rose-400 font-semibold">
-                            -{formatRupiah(row.totalPotongan)}
-                            <span className="block text-[10px] text-slate-400 font-sans font-normal">
-                              Kas: {formatRupiah(row.totalIuranKas)}
+                          <td className="p-3.5 text-right font-mono font-bold">
+                            <span className={row.totalMedaranRupiah < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
+                              {row.totalMedaranRupiah > 0 ? `+${formatRupiah(row.totalMedaranRupiah)}` : formatRupiah(row.totalMedaranRupiah)}
                             </span>
                           </td>
 
@@ -639,55 +696,68 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                                           <th className="p-2">No. SPB</th>
                                           <th className="p-2">Tanggal</th>
                                           <th className="p-2">Truk / PKS</th>
-                                          <th className="p-2 text-right">PKS (Kg)</th>
-                                          <th className="p-2 text-right">Harga</th>
-                                          <th className="p-2 text-right">Bruto</th>
-                                          <th className="p-2 text-right">Potongan</th>
+                                          <th className="p-2 text-right">Timbangan Dimuat (Ram)</th>
+                                          <th className="p-2 text-right">Hasil Timbangan Pabrik/PKS</th>
+                                          <th className="p-2 text-right">Harga TBS</th>
+                                          <th className="p-2 text-right text-amber-600 dark:text-amber-400">Medaran (Kg)</th>
+                                          <th className="p-2 text-right">Nominal Medaran</th>
                                           <th className="p-2 text-right font-bold">Netto</th>
                                           <th className="p-2 text-center">Status</th>
                                           <th className="p-2 text-center">Aksi</th>
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {row.harvests.map((h) => (
-                                          <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                                            <td className="p-2 font-mono font-bold text-slate-900 dark:text-white">{h.noSpb}</td>
-                                            <td className="p-2 text-slate-400">{formatTanggalPendek(h.tanggal)}</td>
-                                            <td className="p-2 text-slate-400">{h.platTruk} - {h.namaPks}</td>
-                                            <td className="p-2 text-right font-mono font-bold text-slate-900 dark:text-white">{formatNumber(h.timbanganPksKg)} kg</td>
-                                            <td className="p-2 text-right font-mono text-slate-600 dark:text-slate-400">{formatRupiah(h.hargaTbsPerKg)}</td>
-                                            <td className="p-2 text-right font-mono text-slate-900 dark:text-white">{formatRupiah(h.totalBruto)}</td>
-                                            <td className="p-2 text-right font-mono text-rose-600 dark:text-rose-400">-{formatRupiah(h.totalPotongan)}</td>
-                                            <td className="p-2 text-right font-mono font-bold text-green-600 dark:text-green-400">{formatRupiah(h.totalNetto)}</td>
-                                            <td className="p-2 text-center">
-                                              <Badge variant={h.statusPembayaran === 'Lunas' ? 'success' : 'warning'} size="sm">
-                                                {h.statusPembayaran}
-                                              </Badge>
-                                            </td>
-                                            <td className="p-2 text-center">
-                                              <div className="flex items-center justify-center gap-1">
-                                                {userRole === 'admin' && (
+                                        {row.harvests.map((h) => {
+                                          const dimuat = h.timbanganRamKg > 0 ? h.timbanganRamKg : (h.timbanganPksKg || 0);
+                                          const pksKg = h.timbanganPksKg > 0 ? h.timbanganPksKg : (h.timbanganRamKg || 0);
+                                          const medaranKg = pksKg - dimuat;
+                                          const harga = h.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780;
+                                          const nominalMedaran = medaranKg * harga;
+                                          return (
+                                            <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                              <td className="p-2 font-mono font-bold text-slate-900 dark:text-white">{h.noSpb}</td>
+                                              <td className="p-2 text-slate-400">{formatTanggalPendek(h.tanggal)}</td>
+                                              <td className="p-2 text-slate-400">{h.platTruk} - {h.namaPks}</td>
+                                              <td className="p-2 text-right font-mono text-slate-600 dark:text-slate-400">{formatNumber(dimuat)} kg</td>
+                                              <td className="p-2 text-right font-mono font-bold text-slate-900 dark:text-white">{formatNumber(pksKg)} kg</td>
+                                              <td className="p-2 text-right font-mono text-slate-600 dark:text-slate-400">{formatRupiah(harga)}</td>
+                                              <td className={`p-2 text-right font-mono font-semibold ${medaranKg < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                                {medaranKg > 0 ? '+' : ''}{formatNumber(medaranKg)} kg
+                                              </td>
+                                              <td className={`p-2 text-right font-mono font-semibold ${nominalMedaran < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                                {nominalMedaran > 0 ? `+${formatRupiah(nominalMedaran)}` : formatRupiah(nominalMedaran)}
+                                              </td>
+                                              <td className="p-2 text-right font-mono font-bold text-green-600 dark:text-green-400">{formatRupiah(h.totalNetto)}</td>
+                                              <td className="p-2 text-center">
+                                                <Badge variant={h.statusPembayaran === 'Lunas' ? 'success' : 'warning'} size="sm">
+                                                  {h.statusPembayaran}
+                                                </Badge>
+                                              </td>
+                                              <td className="p-2 text-center">
+                                                <div className="flex items-center justify-center gap-1">
+                                                  {userRole === 'admin' && (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleTriggerEditPanen(h)}
+                                                      className="p-1 rounded-md text-amber-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                                      title="Edit SPB Panen Ini"
+                                                    >
+                                                      <Edit3 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                  )}
                                                   <button
                                                     type="button"
-                                                    onClick={() => handleTriggerEditPanen(h)}
-                                                    className="p-1 rounded-md text-amber-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                                                    title="Edit SPB Panen Ini"
+                                                    onClick={() => setSelectedPanenForSlip(h)}
+                                                    className="p-1 rounded-md text-green-600 dark:text-green-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                                    title="Cetak Kwitansi SPB"
                                                   >
-                                                    <Edit3 className="w-3.5 h-3.5" />
+                                                    <Printer className="w-3.5 h-3.5" />
                                                   </button>
-                                                )}
-                                                <button
-                                                  type="button"
-                                                  onClick={() => setSelectedPanenForSlip(h)}
-                                                  className="p-1 rounded-md text-green-600 dark:text-green-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                                                  title="Cetak Kwitansi SPB"
-                                                >
-                                                  <Printer className="w-3.5 h-3.5" />
-                                                </button>
-                                              </div>
-                                            </td>
-                                          </tr>
-                                        ))}
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
                                       </tbody>
                                     </table>
                                   </div>
@@ -700,6 +770,30 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                     );
                   })}
                 </tbody>
+
+                {/* Foot Grand Total */}
+                <tfoot className="bg-slate-100 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white">
+                  <tr>
+                    <td colSpan={2} className="p-3.5 pl-6 text-center uppercase tracking-wider text-xs">
+                      TOTAL REKAPITULASI ({rekapDataPetani.length} Petani)
+                    </td>
+                    <td className="p-3.5 text-right font-mono">{formatNumber(grandTotalRamKg)} kg</td>
+                    <td className="p-3.5 text-right font-mono font-bold text-green-600 dark:text-green-400">{formatNumber(grandTotalPksKg)} kg</td>
+                    <td className="p-3.5 text-right font-mono text-xs">{grandAvgSusut}%</td>
+                    <td className={`p-3.5 text-right font-mono font-bold ${grandTotalMedaranKg < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                      {grandTotalMedaranKg > 0 ? '+' : ''}{formatNumber(grandTotalMedaranKg)} kg
+                    </td>
+                    <td className={`p-3.5 text-right font-mono font-black ${grandTotalMedaranRupiah < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                      {grandTotalMedaranRupiah > 0 ? `+${formatRupiah(grandTotalMedaranRupiah)}` : formatRupiah(grandTotalMedaranRupiah)}
+                    </td>
+                    <td className="p-3.5 text-right font-mono font-black text-green-600 dark:text-green-400 text-base">
+                      {formatRupiah(grandTotalNetto)}
+                    </td>
+                    <td colSpan={2} className="p-3.5 pr-6 text-center text-xs text-slate-500">
+                      {rekapDataPetani.every(r => r.statusPembayaran === 'Lunas') ? 'Semua Lunas' : 'Ada Siap Bayar'}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
@@ -715,25 +809,49 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
           {/* Summary KPI Cards untuk Tanggal Terpilih */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Hasil Tonase Petani (PKS)</p>
-              <p className="text-xl font-black text-green-600 dark:text-green-400 font-mono mt-1">{formatKg(totalTanggalPksKg)}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Ram Kebun: {formatKg(totalTanggalRamKg)}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Timbangan Dimuat</p>
+                <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+                  <Scale className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <p className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">{formatKg(totalTanggalRamKg)}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Setara {formatTon(totalTanggalRamKg)} timbangan kebun</p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rata-rata Harga TBS</p>
-              <p className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">{formatRupiah(avgHargaTanggal)}/kg</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Bruto: {formatRupiah(totalTanggalBruto)}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Hasil Timbangan Pabrik/PKS</p>
+                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                  <Building2 className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">{formatKg(totalTanggalPksKg)}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Netto pabrik: {formatTon(totalTanggalPksKg)}</p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Seluruh Potongan</p>
-              <p className="text-xl font-black text-rose-600 dark:text-rose-400 font-mono mt-1">-{formatRupiah(totalTanggalPotongan)}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Iuran Kas: +{formatRupiah(totalTanggalIuran)}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Medaran Nominal</p>
+                <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+                  <Coins className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <p className={`text-xl font-black font-mono mt-1 ${totalTanggalMedaranRp < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                {totalTanggalMedaranRp > 0 ? `+${formatRupiah(totalTanggalMedaranRp)}` : formatRupiah(totalTanggalMedaranRp)}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Tonase: {totalTanggalMedaranKg > 0 ? '+' : ''}{formatKg(totalTanggalMedaranKg)} ({avgTanggalSusut}%)
+              </p>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Netto Petani Dibayarkan</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Netto Dibayarkan</p>
+                <div className="p-1.5 rounded-lg bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-400">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+              </div>
               <p className="text-xl font-black text-green-600 dark:text-green-400 font-mono mt-1">{formatRupiah(totalTanggalNetto)}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">{rekapDataTanggal.length} SPB Panen Terdata</p>
             </div>
@@ -750,7 +868,7 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Menampilkan {rekapDataTanggal.length} rincian hasil tonase petani, harga TBS, netto, dan tombol edit langsung.
+                  Menampilkan {rekapDataTanggal.length} rincian hasil timbangan PKS, harga TBS, dan netto petani.
                 </p>
               </div>
 
@@ -780,11 +898,9 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                       <th className="p-3.5 pl-6 w-12 text-center">No</th>
                       <th className="p-3.5">No. SPB</th>
                       <th className="p-3.5">Nama Petani & Blok</th>
-                      <th className="p-3.5 text-right">Tonase Ram (Kg)</th>
-                      <th className="p-3.5 text-right font-bold text-slate-900 dark:text-white">Tonase PKS (Kg)</th>
+                      <th className="p-3.5 text-right">Timbangan Dimuat (Ram)</th>
+                      <th className="p-3.5 text-right font-bold text-slate-900 dark:text-white">Hasil Timbangan Pabrik/PKS</th>
                       <th className="p-3.5 text-right">Harga TBS</th>
-                      <th className="p-3.5 text-right">Total Bruto</th>
-                      <th className="p-3.5 text-right">Potongan</th>
                       <th className="p-3.5 text-right font-bold text-green-600 dark:text-green-400">Netto Petani</th>
                       <th className="p-3.5 text-center">Status</th>
                       <th className="p-3.5 pr-6 text-center">Aksi (Edit / Cetak)</th>
@@ -795,7 +911,10 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                       const farmer = petaniList.find(pt => pt.id === h.petaniId);
                       const farmerNama = farmer?.nama || h.petaniNama || 'Petani Sawit';
                       const farmerBlok = farmer?.blokLahan || h.blokLahan || '-';
-                      const potTooltip = `Pedaran: ${formatRupiah(h.potonganPedaranRupiah)} | Iuran: ${formatRupiah(h.potonganIuranKasRupiah)} | Upah: ${formatRupiah(h.upahPemanenRupiah)} | Kasbon: ${formatRupiah(h.kasbonPupukRupiah)}`;
+                      const dimuat = h.timbanganRamKg > 0 ? h.timbanganRamKg : (h.timbanganPksKg || 0);
+                      const pksKg = h.timbanganPksKg > 0 ? h.timbanganPksKg : (h.timbanganRamKg || 0);
+                      const harga = h.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780;
+
                       return (
                         <tr 
                           key={h.id}
@@ -825,30 +944,19 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                           </td>
 
                           <td className="p-3.5 text-right font-mono">
-                            {formatNumber(h.timbanganRamKg)} kg
+                            {formatNumber(dimuat)} kg
                           </td>
 
                           <td className="p-3.5 text-right font-mono font-bold text-slate-900 dark:text-white">
-                            {formatNumber(h.timbanganPksKg)} kg
+                            {formatNumber(pksKg)} kg
                             <span className="block text-[10px] text-rose-600 dark:text-rose-400 font-sans font-normal">
                               -{h.selisihKg} kg ({h.persentaseSelisih}%)
                             </span>
                           </td>
 
                           <td className="p-3.5 text-right font-mono font-semibold text-slate-800 dark:text-slate-200">
-                            {formatRupiah(h.hargaTbsPerKg)}
+                            {formatRupiah(harga)}
                             <span className="block text-[10px] text-slate-400 font-sans font-normal">/kg</span>
-                          </td>
-
-                          <td className="p-3.5 text-right font-mono font-bold text-slate-900 dark:text-white">
-                            {formatRupiah(h.totalBruto)}
-                          </td>
-
-                          <td className="p-3.5 text-right font-mono text-rose-600 dark:text-rose-400" title={potTooltip}>
-                            -{formatRupiah(h.totalPotongan)}
-                            <span className="block text-[10px] text-slate-400 font-sans font-normal">
-                              Kas: {formatRupiah(h.potonganIuranKasRupiah)}
-                            </span>
                           </td>
 
                           <td className="p-3.5 text-right font-mono font-black text-green-600 dark:text-green-400 text-sm">
@@ -873,7 +981,7 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                                   type="button"
                                   onClick={() => handleTriggerEditPanen(h)}
                                   className="px-2 py-1 rounded-md text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 transition-colors flex items-center gap-1 cursor-pointer"
-                                  title="Edit Rincian Tonase / Harga / Potongan SPB Ini"
+                                  title="Edit Rincian Tonase / Harga / Medaran SPB Ini"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
                                   <span>Edit</span>
@@ -906,8 +1014,6 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                       <td className="p-3.5 text-right font-mono">{formatNumber(totalTanggalRamKg)} kg</td>
                       <td className="p-3.5 text-right font-mono font-bold text-green-600 dark:text-green-400">{formatNumber(totalTanggalPksKg)} kg</td>
                       <td className="p-3.5 text-right font-mono">{formatRupiah(avgHargaTanggal)}/kg</td>
-                      <td className="p-3.5 text-right font-mono">{formatRupiah(totalTanggalBruto)}</td>
-                      <td className="p-3.5 text-right font-mono text-rose-600 dark:text-rose-400">-{formatRupiah(totalTanggalPotongan)}</td>
                       <td className="p-3.5 text-right font-mono font-black text-green-600 dark:text-green-400 text-base">
                         {formatRupiah(totalTanggalNetto)}
                       </td>
@@ -938,7 +1044,7 @@ export const RekapView: React.FC<RekapViewProps> = ({ onOpenEditPanen }) => {
                 Total Netto Petani: <span className="text-emerald-400 font-mono">{formatRupiah(totalTanggalNetto)}</span>
               </h4>
               <p className="text-xs text-slate-400">
-                Akumulasi dari {rekapDataTanggal.length} SPB • Total Tonase PKS: {formatKg(totalTanggalPksKg)} • Rata-rata TBS: {formatRupiah(avgHargaTanggal)}/kg
+                Akumulasi dari {rekapDataTanggal.length} SPB • Hasil PKS: {formatKg(totalTanggalPksKg)} • Medaran: {formatKg(totalTanggalMedaranKg)} (-{formatRupiah(totalTanggalMedaranRp)})
               </p>
             </div>
 

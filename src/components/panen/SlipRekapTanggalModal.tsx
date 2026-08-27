@@ -56,7 +56,8 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
   const totalSelisihKg = harvests.reduce((sum, p) => sum + p.selisihKg, 0);
   const avgSusutPersen = totalRamKg > 0 ? ((totalSelisihKg / totalRamKg) * 100).toFixed(2) : '0';
   const totalBruto = harvests.reduce((sum, p) => sum + p.totalBruto, 0);
-  const totalPedaranRupiah = harvests.reduce((sum, p) => sum + p.potonganPedaranRupiah, 0);
+  const totalPedaranKg = harvests.reduce((sum, p) => sum + (p.potonganPedaranKg || 0), 0);
+  const totalPedaranRupiah = harvests.reduce((sum, p) => sum + (p.potonganPedaranRupiah || 0), 0);
   const totalIuranKasRupiah = harvests.reduce((sum, p) => sum + p.potonganIuranKasRupiah, 0);
   const totalUpahPanenRupiah = harvests.reduce((sum, p) => sum + p.upahPemanenRupiah, 0);
   const totalKasbonPupukRupiah = harvests.reduce((sum, p) => sum + p.kasbonPupukRupiah, 0);
@@ -86,21 +87,23 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
       const farmerBlok = farmer?.blokLahan || h.blokLahan || '-';
 
       text += `${idx + 1}. *${farmerNama}* (${farmerBlok})\n`;
-      text += `   - Tonase PKS: ${formatKg(h.timbanganPksKg)} (Ram: ${formatKg(h.timbanganRamKg)})\n`;
-      text += `   - Harga TBS : ${formatRupiah(h.hargaTbsPerKg)}/kg\n`;
-      text += `   - Bruto     : ${formatRupiah(h.totalBruto)}\n`;
-      text += `   - Potongan  : -${formatRupiah(h.totalPotongan)}\n`;
-      text += `   - *NETTO*   : *${formatRupiah(h.totalNetto)}* [${h.statusPembayaran}]\n\n`;
+      text += `   - Hasil PKS    : ${formatKg(h.timbanganPksKg)} (Ram: ${formatKg(h.timbanganRamKg)})\n`;
+      text += `   - Harga TBS    : ${formatRupiah(h.hargaTbsPerKg)}/kg\n`;
+      text += `   - Total Bruto  : ${formatRupiah(h.totalBruto)}\n`;
+      text += `   - Medaran (Kg) : ${formatKg(h.potonganPedaranKg || 0)}\n`;
+      text += `   - Nom. Medaran : -${formatRupiah(h.potonganPedaranRupiah || 0)}\n`;
+      text += `   - *NETTO*      : *${formatRupiah(h.totalNetto)}* [${h.statusPembayaran}]\n\n`;
     });
 
     text += `------------------------------------\n`;
     text += `*TOTAL KESELURUHAN TANGGAL INI:*\n`;
-    text += `• Total Tonase Ram : ${formatKg(totalRamKg)}\n`;
-    text += `• Total Tonase PKS : ${formatKg(totalPksKg)}\n`;
-    text += `• Selisih (Susut)  : -${formatKg(totalSelisihKg)} (${avgSusutPersen}%)\n`;
-    text += `• Rata-rata Harga  : ${formatRupiah(avgHarga)}/kg\n`;
-    text += `• Total Bruto      : ${formatRupiah(totalBruto)}\n`;
-    text += `• Total Potongan   : -${formatRupiah(totalPotongan)}\n`;
+    text += `• Total Tonase Ram   : ${formatKg(totalRamKg)}\n`;
+    text += `• Hasil Timbangan PKS: ${formatKg(totalPksKg)}\n`;
+    text += `• Selisih (Susut)    : -${formatKg(totalSelisihKg)} (${avgSusutPersen}%)\n`;
+    text += `• Rata-rata Harga    : ${formatRupiah(avgHarga)}/kg\n`;
+    text += `• Total Bruto        : ${formatRupiah(totalBruto)}\n`;
+    text += `• Total Medaran (Kg) : ${formatKg(totalPedaranKg)}\n`;
+    text += `• Total Nom. Medaran : -${formatRupiah(totalPedaranRupiah)}\n`;
     text += `• *TOTAL NETTO DIBAYAR:* *${formatRupiah(totalNetto)}*\n\n`;
     text += `_Dokumen Resmi ${pengaturan.namaKelompok} - Dicetak otomatis melalui Sistem Sawit Mandiri_`;
 
@@ -198,16 +201,16 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
               <span className="font-bold text-gray-900">{formatNumber(totalRamKg)} kg</span>
             </div>
             <div>
-              <span className="text-gray-500 text-[10px] block">TOTAL PKS NETTO:</span>
+              <span className="text-gray-500 text-[10px] block">HASIL PKS NETTO:</span>
               <span className="font-bold text-gray-900">{formatNumber(totalPksKg)} kg</span>
             </div>
             <div>
-              <span className="text-gray-500 text-[10px] block">SUSUT TIMBANGAN:</span>
-              <span className="font-bold text-rose-700">-{formatNumber(totalSelisihKg)} kg ({avgSusutPersen}%)</span>
+              <span className="text-gray-500 text-[10px] block">TOTAL MEDARAN (KG):</span>
+              <span className="font-bold text-amber-700">{formatNumber(totalPedaranKg)} kg</span>
             </div>
             <div>
-              <span className="text-gray-500 text-[10px] block">RATA-RATA HARGA:</span>
-              <span className="font-bold text-gray-900">{formatRupiah(avgHarga)}/kg</span>
+              <span className="text-gray-500 text-[10px] block">NOMINAL MEDARAN:</span>
+              <span className="font-bold text-rose-700">-{formatRupiah(totalPedaranRupiah)}</span>
             </div>
           </div>
 
@@ -220,10 +223,11 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
                   <th className="border border-gray-400 p-1.5">No. SPB</th>
                   <th className="border border-gray-400 p-1.5">Nama Petani / Blok</th>
                   <th className="border border-gray-400 p-1.5 text-right">Ram (Kg)</th>
-                  <th className="border border-gray-400 p-1.5 text-right">PKS (Kg)</th>
+                  <th className="border border-gray-400 p-1.5 text-right">Hasil PKS (Kg)</th>
                   <th className="border border-gray-400 p-1.5 text-right">Harga TBS</th>
                   <th className="border border-gray-400 p-1.5 text-right">Bruto (Rp)</th>
-                  <th className="border border-gray-400 p-1.5 text-right">Potongan (Rp)</th>
+                  <th className="border border-gray-400 p-1.5 text-right text-amber-800">Medaran (Kg)</th>
+                  <th className="border border-gray-400 p-1.5 text-right text-rose-800">Nom. Medaran (Rp)</th>
                   <th className="border border-gray-400 p-1.5 text-right font-bold">Netto Petani (Rp)</th>
                   <th className="border border-gray-400 p-1.5 text-center">Status</th>
                 </tr>
@@ -233,9 +237,6 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
                   const farmer = petaniList.find(pt => pt.id === h.petaniId);
                   const farmerNama = farmer?.nama || h.petaniNama || 'Petani Sawit';
                   const farmerBlok = farmer?.blokLahan || h.blokLahan || '-';
-                  const potDetail = h.totalPotongan > 0 
-                    ? `Ped: ${formatNumber(h.potonganPedaranRupiah)} | Iuran: ${formatNumber(h.potonganIuranKasRupiah)}` 
-                    : '-';
                   return (
                     <tr key={h.id} className={index % 2 === 1 ? 'bg-gray-50/70' : 'bg-white'}>
                       <td className="border border-gray-400 p-1.5 text-center font-mono">{index + 1}</td>
@@ -248,8 +249,11 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
                       <td className="border border-gray-400 p-1.5 text-right font-mono font-bold text-gray-900">{formatNumber(h.timbanganPksKg)}</td>
                       <td className="border border-gray-400 p-1.5 text-right font-mono">{formatRupiah(h.hargaTbsPerKg)}</td>
                       <td className="border border-gray-400 p-1.5 text-right font-mono">{formatRupiah(h.totalBruto)}</td>
-                      <td className="border border-gray-400 p-1.5 text-right font-mono text-rose-700" title={potDetail}>
-                        -{formatRupiah(h.totalPotongan)}
+                      <td className="border border-gray-400 p-1.5 text-right font-mono text-amber-800">
+                        {formatNumber(h.potonganPedaranKg || 0)}
+                      </td>
+                      <td className="border border-gray-400 p-1.5 text-right font-mono text-rose-700">
+                        -{formatRupiah(h.potonganPedaranRupiah || 0)}
                       </td>
                       <td className="border border-gray-400 p-1.5 text-right font-mono font-bold text-gray-900 text-xs">
                         {formatRupiah(h.totalNetto)}
@@ -272,7 +276,8 @@ export const SlipRekapTanggalModal: React.FC<SlipRekapTanggalModalProps> = ({
                   <td className="border border-gray-400 p-2 text-right font-mono">{formatNumber(totalPksKg)} kg</td>
                   <td className="border border-gray-400 p-2 text-right font-mono text-gray-600">-</td>
                   <td className="border border-gray-400 p-2 text-right font-mono">{formatRupiah(totalBruto)}</td>
-                  <td className="border border-gray-400 p-2 text-right font-mono text-rose-700">-{formatRupiah(totalPotongan)}</td>
+                  <td className="border border-gray-400 p-2 text-right font-mono text-amber-800">{formatNumber(totalPedaranKg)} kg</td>
+                  <td className="border border-gray-400 p-2 text-right font-mono text-rose-700">-{formatRupiah(totalPedaranRupiah)}</td>
                   <td className="border border-gray-400 p-2 text-right font-mono text-gray-900 font-black text-sm">
                     {formatRupiah(totalNetto)}
                   </td>
