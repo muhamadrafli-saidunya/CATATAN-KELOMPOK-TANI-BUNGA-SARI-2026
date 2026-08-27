@@ -87,7 +87,6 @@ export const SlipSemuaPetaniModal: React.FC<SlipSemuaPetaniModalProps> = ({
       rincianSpb += `\n*${idx + 1}. SPB: ${h.noSpb}* (${formatTanggalPendek(h.tanggal)})
    • Muatan: ${formatKg(kgKebun)} @ ${formatRupiah(h.hargaTbsPerKg)}/kg
    • PKS: ${h.namaPks} (${h.platTruk})
-   • Bruto: ${formatRupiah(h.totalBruto)}
    • Potongan: -${formatRupiah(h.totalPotongan)}
    • *Netto: ${formatRupiah(h.totalNetto)}*\n`;
     });
@@ -106,7 +105,6 @@ Total SPB   : ${totalRit} Rit Pengiriman
 *RINGKASAN TOTAL AKUMULASI:*
 • Total Tonase Kebun : ${formatKg(totalRamKg)}
 • Total Tonase Pabrik: ${formatKg(totalPksKg)}
-• Total Nilai Bruto  : ${formatRupiah(totalBruto)}
 
 *RINCIAN SELURUH POTONGAN:*
 • Pot. Pedaran/Sortasi : -${formatRupiah(totalPedaranRupiah)}
@@ -250,7 +248,6 @@ _Ketua: ${pengaturan.ketua}_`;
                     <th className="p-2 text-left border-r border-gray-300">Truk / PKS</th>
                     <th className="p-2 text-right border-r border-gray-300">Berat (Kg)</th>
                     <th className="p-2 text-right border-r border-gray-300">Harga (Rp)</th>
-                    <th className="p-2 text-right border-r border-gray-300">Bruto (Rp)</th>
                     <th className="p-2 text-right border-r border-gray-300">Potongan (Rp)</th>
                     <th className="p-2 text-right">Netto (Rp)</th>
                   </tr>
@@ -266,7 +263,6 @@ _Ketua: ${pengaturan.ketua}_`;
                         <td className="p-2 text-gray-600 border-r border-gray-300">{h.platTruk} - {h.namaPks}</td>
                         <td className="p-2 text-right font-mono font-bold border-r border-gray-300">{formatNumber(kg)} kg</td>
                         <td className="p-2 text-right font-mono border-r border-gray-300">{formatRupiah(h.hargaTbsPerKg)}</td>
-                        <td className="p-2 text-right font-mono text-gray-900 border-r border-gray-300">{formatRupiah(h.totalBruto)}</td>
                         <td className="p-2 text-right font-mono text-rose-700 border-r border-gray-300">-{formatRupiah(h.totalPotongan)}</td>
                         <td className="p-2 text-right font-mono font-bold text-emerald-800 bg-emerald-50/40">{formatRupiah(h.totalNetto)}</td>
                       </tr>
@@ -282,9 +278,6 @@ _Ketua: ${pengaturan.ketua}_`;
                       {formatNumber(totalRamKg)} kg
                     </td>
                     <td className="p-2 border-r border-gray-300 text-center text-gray-400">-</td>
-                    <td className="p-2 text-right font-mono border-r border-gray-300 text-gray-950">
-                      {formatRupiah(totalBruto)}
-                    </td>
                     <td className="p-2 text-right font-mono border-r border-gray-300 text-rose-700">
                       -{formatRupiah(totalPotongan)}
                     </td>
