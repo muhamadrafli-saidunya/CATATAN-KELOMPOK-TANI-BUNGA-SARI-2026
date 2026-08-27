@@ -112,19 +112,6 @@ export const KasView: React.FC = () => {
   const totalMedaranMasuk = kasList.filter(k => k.kategori === 'Medaran' && k.jenis === 'Masuk').reduce((s, k) => s + k.jumlah, 0);
   const jmlTransaksiMedaran = kasList.filter(k => k.kategori === 'Medaran').length;
 
-  // Omset Kelompok Tani dari Selisih Timbangan
-  const totalSelisihPanenKg = panenList.reduce((s, p) => s + p.selisihKg, 0);
-  const totalOmzetKelompokSelisih = panenList.reduce((s, p) => s + (p.selisihKg * (p.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780)), 0);
-
-  const handleBukukanOmsetSelisih = () => {
-    setKasJenis('Masuk');
-    setKasKategori('Selisih Timbangan / Margin Panen');
-    setKasKeterangan(`Omset Kelompok Tani: Selisih Timbangan Kebun vs Pabrik (${formatKg(totalSelisihPanenKg)} @ ${formatRupiah(pengaturan.hargaTbsDefault)}/kg)`);
-    setKasJumlah(totalOmzetKelompokSelisih);
-    setKasBuktiRef(`OMZET-PANEN-${new Date().toISOString().slice(0, 7)}`);
-    setIsKasModalOpen(true);
-  };
-
   // Pinjaman Calculations
   const totalPinjamanAktif = pinjamanList.filter(p => p.status === 'Aktif').reduce((s, p) => s + p.sisaPinjaman, 0);
   const jmlPeminjamAktif = pinjamanList.filter(p => p.status === 'Aktif').length;
@@ -379,44 +366,6 @@ export const KasView: React.FC = () => {
               <p className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono mt-1">-{formatRupiah(totalPengeluaran)}</p>
               <span className="text-[11px] text-slate-400 mt-1 block">Perawatan jalan, ATK & operasional</span>
             </div>
-          </div>
-
-          {/* Banner: Omset Kelompok Tani dari Selisih Timbangan Panen */}
-          <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 p-4 sm:p-5 rounded-xl border border-emerald-800/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">
-                    Omset Kelompok Tani (Selisih Timbangan Periode Ini)
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    Kebun vs Pabrik
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-baseline gap-2 mt-0.5">
-                  <span className="text-lg font-black text-emerald-400 font-mono">
-                    {formatRupiah(totalOmzetKelompokSelisih)}
-                  </span>
-                  <span className="text-xs text-slate-300 font-mono">
-                    (Total Selisih {formatKg(totalSelisihPanenKg)} × {formatRupiah(pengaturan.hargaTbsDefault)}/kg)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {userRole === 'admin' && (
-              <button
-                type="button"
-                onClick={handleBukukanOmsetSelisih}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer shrink-0 self-start sm:self-auto"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Bukukan ke Kas Masuk</span>
-              </button>
-            )}
           </div>
 
           {/* Filter & Search Bar Kas */}

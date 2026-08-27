@@ -21,7 +21,9 @@ import {
   formatKg, 
   formatTanggalIndo, 
   formatNumber, 
-  formatTanggalPendek 
+  formatTanggalPendek,
+  getDaftarPilihanBulan,
+  formatBulanTahunIndo
 } from '../../lib/utils';
 import { exportPanenToExcel } from '../../lib/excelHelper';
 import { SlipSemuaPetaniModal } from '../panen/SlipSemuaPetaniModal';
@@ -46,6 +48,11 @@ export const RekapView: React.FC = () => {
     petani: Petani;
     harvests: PanenRecord[];
   } | null>(null);
+
+  // Daftar 12 Bulan Lengkap dan Riwayat Bulan Panen Aktual
+  const periodeBulanList = useMemo(() => {
+    return getDaftarPilihanBulan(panenList.map(p => p.tanggal));
+  }, [panenList]);
 
   // Group harvest by Petani
   const rekapData = useMemo(() => {
@@ -105,7 +112,6 @@ export const RekapView: React.FC = () => {
   const grandTotalPksKg = rekapData.reduce((s, r) => s + r.totalPksKg, 0);
   const grandTotalSelisihKg = rekapData.reduce((s, r) => s + r.totalSelisihKg, 0);
   const grandAvgSusut = grandTotalRamKg > 0 ? ((grandTotalSelisihKg / grandTotalRamKg) * 100).toFixed(2) : '0';
-  const grandTotalOmzetKelompokSelisih = grandTotalSelisihKg * (pengaturan.hargaTbsDefault || 2780);
   const grandTotalBruto = rekapData.reduce((s, r) => s + r.totalBruto, 0);
   const grandTotalPotongan = rekapData.reduce((s, r) => s + r.totalPotongan, 0);
   const grandTotalNetto = rekapData.reduce((s, r) => s + r.totalNetto, 0);
@@ -131,9 +137,7 @@ export const RekapView: React.FC = () => {
       return matchMonth;
     });
 
-    const monthName = selectedMonth === 'all' 
-      ? 'Semua Periode' 
-      : `Periode ${selectedMonth}`;
+    const monthName = formatBulanTahunIndo(selectedMonth);
 
     exportPanenToExcel(periodHarvests, {
       namaKelompok: pengaturan.namaKelompok || 'Kelompok Tani Bunga Sari',
@@ -190,10 +194,12 @@ export const RekapView: React.FC = () => {
             onChange={(e) => setSelectedMonth(e.target.value)}
             className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none"
           >
-            <option value="2026-08">Agustus 2026 (Bulan Berjalan)</option>
-            <option value="2026-07">Juli 2026</option>
-            <option value="2026-06">Juni 2026</option>
-            <option value="all">Semua Periode</option>
+            <option value="all">Semua Periode (1 Tahun Penuh)</option>
+            {periodeBulanList.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -213,20 +219,19 @@ export const RekapView: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Tonase PKS Netto</p>
           <p className="text-xl font-black text-green-600 dark:text-green-400 font-mono mt-1">{formatKg(grandTotalPksKg)}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Ram: {formatKg(grandTotalRamKg)}</p>
-        </div>
-
-        <div className="bg-slate-950 text-white p-4 rounded-xl border border-slate-800 shadow-sm relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-20 h-20 bg-emerald-500/15 rounded-full blur-xl pointer-events-none" />
-          <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider relative z-10">Omset Kelompok (Selisih)</p>
-          <p className="text-xl font-black text-emerald-400 font-mono mt-1 relative z-10">{formatRupiah(grandTotalOmzetKelompokSelisih)}</p>
-          <p className="text-[11px] text-slate-300 mt-0.5 relative z-10 font-mono">Susut: {formatKg(grandTotalSelisihKg)} ({grandAvgSusut}%)</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Ram Kebun: {formatKg(grandTotalRamKg)}</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Bruto Panen</p>
           <p className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">{formatRupiah(grandTotalBruto)}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Potongan: -{formatRupiah(grandTotalPotongan)}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Rata-rata Harga TBS</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Seluruh Potongan</p>
+          <p className="text-xl font-black text-rose-600 dark:text-rose-400 font-mono mt-1">-{formatRupiah(grandTotalPotongan)}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Iuran, Upah, Kasbon</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -468,17 +473,7 @@ export const RekapView: React.FC = () => {
           onClose={() => setSelectedPetaniForSlipAll(null)}
           petani={selectedPetaniForSlipAll.petani}
           harvests={selectedPetaniForSlipAll.harvests}
-          periodeLabel={
-            selectedMonth === 'all' 
-              ? 'Semua Periode' 
-              : selectedMonth === '2026-08' 
-                ? 'Agustus 2026' 
-                : selectedMonth === '2026-07' 
-                  ? 'Juli 2026' 
-                  : selectedMonth === '2026-06' 
-                    ? 'Juni 2026' 
-                    : selectedMonth
-          }
+          periodeLabel={formatBulanTahunIndo(selectedMonth)}
         />
       )}
 

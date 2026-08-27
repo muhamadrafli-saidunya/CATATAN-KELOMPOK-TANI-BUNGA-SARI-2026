@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Printer, 
@@ -15,7 +15,9 @@ import {
   formatRupiah, 
   formatKg, 
   formatTanggalIndo, 
-  formatNumber 
+  formatNumber,
+  formatBulanTahunIndo,
+  getDaftarPilihanBulan
 } from '../../lib/utils';
 import { exportPanenToExcel } from '../../lib/excelHelper';
 
@@ -26,6 +28,11 @@ export const CetakLaporanView: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [copied, setCopied] = useState(false);
 
+  // Daftar 12 Bulan Lengkap dan Riwayat Bulan Panen Aktual
+  const periodeBulanList = useMemo(() => {
+    return getDaftarPilihanBulan(panenList.map(p => p.tanggal));
+  }, [panenList]);
+
   // Filter records
   const filteredPanen = panenList.filter(p => selectedMonth === 'all' || p.tanggal.startsWith(selectedMonth));
 
@@ -33,7 +40,7 @@ export const CetakLaporanView: React.FC = () => {
   const totalRam = filteredPanen.reduce((s, p) => s + p.timbanganRamKg, 0);
   const totalPks = filteredPanen.reduce((s, p) => s + p.timbanganPksKg, 0);
   const totalSelisih = filteredPanen.reduce((s, p) => s + p.selisihKg, 0);
-  const totalOmzetKelompokSelisih = filteredPanen.reduce((s, p) => s + (p.selisihKg * (p.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780)), 0);
+  const totalNilaiSelisih = filteredPanen.reduce((s, p) => s + (p.selisihKg * (p.hargaTbsPerKg || pengaturan.hargaTbsDefault || 2780)), 0);
   const totalBruto = filteredPanen.reduce((s, p) => s + p.totalBruto, 0);
   const totalPedaran = filteredPanen.reduce((s, p) => s + p.potonganPedaranRupiah, 0);
   const totalIuran = filteredPanen.reduce((s, p) => s + p.potonganIuranKasRupiah, 0);
@@ -42,6 +49,8 @@ export const CetakLaporanView: React.FC = () => {
   const totalPotongan = filteredPanen.reduce((s, p) => s + p.totalPotongan, 0);
   const totalNetto = filteredPanen.reduce((s, p) => s + p.totalNetto, 0);
 
+  const periodeLabel = formatBulanTahunIndo(selectedMonth);
+
   const handlePrint = () => {
     window.print();
   };
@@ -49,16 +58,15 @@ export const CetakLaporanView: React.FC = () => {
   const handleExportExcel = () => {
     exportPanenToExcel(filteredPanen, {
       namaKelompok: pengaturan.namaKelompok || 'Kelompok Tani Bunga Sari',
-      periodeLabel: selectedMonth === 'all' ? 'Semua Periode' : `Periode ${selectedMonth}`,
+      periodeLabel,
     });
   };
 
   const handleCopyWaSummary = () => {
-    const text = `*LAPORAN REKAPITULASI PANEN SAWIT*\n*${pengaturan.namaKelompok.toUpperCase()}*\nPeriode: ${selectedMonth === '2026-08' ? 'Agustus 2026' : selectedMonth}\n\n*RINGKASAN TOTAL:*
+    const text = `*LAPORAN REKAPITULASI PANEN SAWIT*\n*${pengaturan.namaKelompok.toUpperCase()}*\nPeriode: ${periodeLabel}\n\n*RINGKASAN TOTAL:*
 - Total Tonase Ram Kebun: ${formatKg(totalRam)}
 - Total Tonase PKS Netto: ${formatKg(totalPks)}
 - Selisih Timbangan (Susut): -${formatKg(totalSelisih)} (${totalRam > 0 ? ((totalSelisih / totalRam) * 100).toFixed(2) : 0}%)
-- *OMSET KELOMPOK TANI (Selisih × Harga TBS):* *${formatRupiah(totalOmzetKelompokSelisih)}*
 - Total Bruto Panen: ${formatRupiah(totalBruto)}
 - Total Potongan (Pedaran/Iuran/Upah): -${formatRupiah(totalPotongan)}
 - Total Iuran Kas Terkumpul: +${formatRupiah(totalIuran)}
@@ -90,11 +98,24 @@ _Dicetak resmi melalui Sistem Manajemen Kelompok Tani Bunga Sari._`;
           <select
             value={reportType}
             onChange={(e) => setReportType(e.target.value as any)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
+            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
           >
             <option value="rekap-panen">Rekapitulasi Panen & Netto Petani</option>
             <option value="selisih-susut">Laporan Audit Selisih & Susut Tonase</option>
             <option value="kas-kelompok">Laporan Buku Kas & Keuangan</option>
+          </select>
+
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none cursor-pointer"
+          >
+            <option value="all">Semua Periode (1 Tahun Penuh)</option>
+            {periodeBulanList.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
 
           <button
@@ -153,7 +174,7 @@ _Dicetak resmi melalui Sistem Manajemen Kelompok Tani Bunga Sari._`;
             {reportType === 'kas-kelompok' && 'LAPORAN BUKU KAS & PERTANGGUNGJAWABAN KEUANGAN'}
           </h2>
           <p className="text-xs text-gray-600 mt-1 font-sans">
-            Periode: <strong>Agustus 2026</strong> | Dicetak pada: {formatTanggalIndo(new Date().toISOString())}
+            Periode: <strong>{periodeLabel}</strong> | Dicetak pada: {formatTanggalIndo(new Date().toISOString())}
           </p>
         </div>
 
@@ -231,7 +252,7 @@ _Dicetak resmi melalui Sistem Manajemen Kelompok Tani Bunga Sari._`;
                   <th className="border border-gray-400 p-2 text-right">PKS (Kg)</th>
                   <th className="border border-gray-400 p-2 text-right">Susut (Kg)</th>
                   <th className="border border-gray-400 p-2 text-right">Susut (%)</th>
-                  <th className="border border-gray-400 p-2 text-right font-bold">Omset Selisih (Rp)</th>
+                  <th className="border border-gray-400 p-2 text-right font-bold">Nilai Selisih (Rp)</th>
                 </tr>
               </thead>
               <tbody>
@@ -247,19 +268,19 @@ _Dicetak resmi melalui Sistem Manajemen Kelompok Tani Bunga Sari._`;
                       <td className="border border-gray-400 p-1.5 text-right font-mono">{formatNumber(p.timbanganPksKg)}</td>
                       <td className="border border-gray-400 p-1.5 text-right font-mono text-rose-700">-{p.selisihKg}</td>
                       <td className="border border-gray-400 p-1.5 text-right font-mono">{p.persentaseSelisih}%</td>
-                      <td className="border border-gray-400 p-1.5 text-right font-mono font-bold text-green-700">{formatRupiah(nilaiSelisih)}</td>
+                      <td className="border border-gray-400 p-1.5 text-right font-mono font-bold text-slate-900">{formatRupiah(nilaiSelisih)}</td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot className="bg-gray-200 font-bold border-t-2 border-gray-800">
                 <tr>
-                  <td colSpan={4} className="border border-gray-400 p-2 text-center uppercase">TOTAL OMSET SELISIH KELOMPOK TANI</td>
+                  <td colSpan={4} className="border border-gray-400 p-2 text-center uppercase">TOTAL SELISIH SUSUT TIMBANGAN</td>
                   <td className="border border-gray-400 p-2 text-right font-mono">{formatNumber(totalRam)} kg</td>
                   <td className="border border-gray-400 p-2 text-right font-mono">{formatNumber(totalPks)} kg</td>
                   <td className="border border-gray-400 p-2 text-right font-mono text-rose-700">-{formatNumber(totalSelisih)} kg</td>
                   <td className="border border-gray-400 p-2 text-right font-mono">{totalRam > 0 ? ((totalSelisih / totalRam) * 100).toFixed(2) : 0}%</td>
-                  <td className="border border-gray-400 p-2 text-right font-mono font-bold text-green-800">{formatRupiah(totalOmzetKelompokSelisih)}</td>
+                  <td className="border border-gray-400 p-2 text-right font-mono font-bold text-slate-900">{formatRupiah(totalNilaiSelisih)}</td>
                 </tr>
               </tfoot>
             </table>

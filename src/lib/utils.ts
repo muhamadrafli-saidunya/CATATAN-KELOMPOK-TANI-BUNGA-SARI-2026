@@ -68,6 +68,84 @@ export function formatTanggalPendek(dateStr: string): string {
   }
 }
 
+// Nama-nama bulan dalam bahasa Indonesia
+export const NAMA_BULAN_INDO = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
+// Format Periode Bulan Tahun (contoh: 2026-08 -> Agustus 2026, all -> Semua Periode)
+export function formatBulanTahunIndo(periodStr: string): string {
+  if (!periodStr || periodStr === 'all') return 'Semua Periode';
+  const parts = periodStr.split('-');
+  if (parts.length >= 2) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    if (monthIdx >= 0 && monthIdx < 12) {
+      return `${NAMA_BULAN_INDO[monthIdx]} ${year}`;
+    }
+  }
+  return periodStr;
+}
+
+export interface PeriodeBulanOption {
+  value: string;
+  label: string;
+  count: number;
+  isCurrent?: boolean;
+}
+
+// Menghasilkan daftar 12 bulan lengkap (Januari - Desember) digabung dengan bulan panen aktual
+export function getDaftarPilihanBulan(panenDates: string[], referenceYear = 2026, currentMonthCode = '2026-08'): PeriodeBulanOption[] {
+  // Hitung jumlah transaksi panen per bulan
+  const countMap: Record<string, number> = {};
+  panenDates.forEach(dateStr => {
+    if (dateStr && dateStr.length >= 7) {
+      const ym = dateStr.slice(0, 7);
+      countMap[ym] = (countMap[ym] || 0) + 1;
+    }
+  });
+
+  // Kumpulkan semua tahun yang ada dari data dan referenceYear
+  const years = new Set<number>([referenceYear]);
+  Object.keys(countMap).forEach(ym => {
+    const y = parseInt(ym.slice(0, 4), 10);
+    if (!isNaN(y)) years.add(y);
+  });
+
+  const sortedYears = Array.from(years).sort((a, b) => b - a);
+  const options: PeriodeBulanOption[] = [];
+
+  sortedYears.forEach(year => {
+    // 12 bulan dalam setahun (dimulai dari Desember ke Januari atau Januari ke Desember)
+    // Standar akuntansi: urutkan dari bulan terbaru (Desember -> Januari)
+    for (let m = 12; m >= 1; m--) {
+      const monthPad = m.toString().padStart(2, '0');
+      const val = `${year}-${monthPad}`;
+      const monthName = NAMA_BULAN_INDO[m - 1];
+      const count = countMap[val] || 0;
+      const isCurrent = val === currentMonthCode;
+
+      let label = `${monthName} ${year}`;
+      if (isCurrent) {
+        label += ' (Bulan Berjalan)';
+      }
+      if (count > 0) {
+        label += ` • ${count} Panen`;
+      }
+
+      options.push({
+        value: val,
+        label,
+        count,
+        isCurrent,
+      });
+    }
+  });
+
+  return options;
+}
+
 // Helper untuk status badge susut tonase
 export function getSusutBadgeClass(persen: number, toleransi: number = 2.0): {
   color: string;

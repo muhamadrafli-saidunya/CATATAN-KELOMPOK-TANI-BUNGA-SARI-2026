@@ -55,7 +55,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddPanen }) 
   } = useApp();
 
   const [dashboardSubTab, setDashboardSubTab] = useState<'ringkasan' | 'armada'>('ringkasan');
-  const [selectedChartMode, setSelectedChartMode] = useState<'tonase' | 'selisih' | 'omzet'>('tonase');
 
   // Local state for Quick Edit Harga TBS & Tanggal Hari Panen (Dasar Input Panen Baru)
   const [inputHargaTbs, setInputHargaTbs] = useState<number>(pengaturan.hargaTbsDefault || 2780);
@@ -139,17 +138,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddPanen }) 
 
   const hargaTbsPeriode = pengaturan.hargaTbsDefault || 2780;
 
-  // OMSET KELOMPOK TANI = Total Selisih Timbangan (Kebun vs Pabrik) x Harga TBS Periode Panen Saat Ini
-  const totalOmzetKelompokSelisih = displayedPanen.reduce((sum, item) => {
-    const harga = item.hargaTbsPerKg || hargaTbsPeriode;
-    return sum + (item.selisihKg * harga);
-  }, 0);
-
   const totalOmzetBruto = displayedPanen.reduce((sum, item) => sum + item.totalBruto, 0);
   const totalNettoPetani = displayedPanen.reduce((sum, item) => sum + item.totalNetto, 0);
   const totalPotongan = displayedPanen.reduce((sum, item) => sum + item.totalPotongan, 0);
   const totalIuranKas = displayedPanen.reduce((sum, item) => sum + item.potonganIuranKasRupiah, 0);
-  const totalAkumulasiPendapatanKelompok = totalOmzetKelompokSelisih + totalIuranKas;
 
   const saldoKasKelompok = kasList.length > 0 ? kasList[kasList.length - 1].saldoSetelah : 0;
   const pendingPaymentCount = displayedPanen.filter(p => p.statusPembayaran !== 'Lunas').length;
@@ -454,15 +446,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddPanen }) 
               </div>
             </div>
 
-            {/* Metric 2: Omset Kelompok Tani (Selisih Timbangan Kebun vs Pabrik x Harga TBS) (Featured Dark Bento Card) */}
+            {/* Metric 2: Total Bruto Nilai Panen TBS */}
             <div className="bg-slate-950 text-white rounded-xl p-5 border border-slate-800 shadow-sm flex flex-col justify-between relative overflow-hidden">
               <div className="absolute right-0 top-0 -mt-2 -mr-2 w-28 h-28 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-center justify-between relative z-10">
                 <div>
                   <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">
-                    Omset Kelompok Tani
+                    Total Bruto Panen
                   </span>
-                  <span className="text-[10px] text-slate-400">Selisih Timbangan × Harga TBS</span>
+                  <span className="text-[10px] text-slate-400">Sebelum Seluruh Potongan</span>
                 </div>
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
                   <TrendingUp className="w-4 h-4" />
@@ -471,17 +463,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddPanen }) 
 
               <div className="mt-3 relative z-10">
                 <div className="text-2xl font-bold text-emerald-400 font-mono">
-                  {formatRupiah(totalOmzetKelompokSelisih)}
+                  {formatRupiah(totalOmzetBruto)}
                 </div>
                 <div className="text-xs text-slate-300 mt-1">
                   <span>
-                    Selisih: <strong className="text-white font-mono">{formatKg(totalSelisihKg)}</strong> × <strong className="text-white font-mono">{formatRupiah(hargaTbsPeriode)}/kg</strong>
+                    Rata-rata Harga: <strong className="text-white font-mono">{formatRupiah(hargaTbsPeriode)}/kg</strong>
                   </span>
                 </div>
               </div>
 
               <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 relative z-10">
-                <span>Total Susut: <strong className="text-emerald-300">-{formatKg(totalSelisihKg)} ({avgSusutPersen}%)</strong></span>
+                <span>Total Potongan: <strong className="text-rose-400 font-mono">-{formatRupiah(totalPotongan)}</strong></span>
               </div>
             </div>
 
@@ -511,7 +503,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddPanen }) 
               </div>
             </div>
 
-            {/* Metric 4: Saldo Kas & Total Akumulasi Pendapatan Kelompok */}
+            {/* Metric 4: Saldo Kas & Iuran */}
             <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Saldo Kas & Iuran</span>
@@ -526,8 +518,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenAddPanen }) 
                 </div>
               </div>
               <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>Omset Selisih + Iuran:</span>
-                <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{formatRupiah(totalAkumulasiPendapatanKelompok)}</strong>
+                <span>Iuran Kas Terkumpul:</span>
+                <strong className="text-emerald-600 dark:text-emerald-400 font-mono">+{formatRupiah(totalIuranKas)}</strong>
               </div>
             </div>
 

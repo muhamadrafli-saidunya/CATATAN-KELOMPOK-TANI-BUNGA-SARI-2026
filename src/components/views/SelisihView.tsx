@@ -120,7 +120,7 @@ export const SelisihView: React.FC = () => {
 
         <div className="bg-slate-950 text-white p-5 rounded-xl border border-slate-800 shadow-sm relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
-          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block relative z-10">Omset Kelompok (Selisih Timbangan)</span>
+          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block relative z-10">Estimasi Nilai Selisih Timbangan</span>
           <p className="text-2xl font-black text-emerald-400 font-mono mt-1 relative z-10">{formatRupiah(totalLossNominal)}</p>
           <span className="text-[11px] text-slate-300 relative z-10 font-mono">
             {formatKg(totalSelisih)} × {formatRupiah(pengaturan.hargaTbsDefault)}/kg
