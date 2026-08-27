@@ -73,7 +73,7 @@ const MainApp: React.FC = () => {
             )}
 
             {activeTab === 'rekap' && (
-              <RekapView />
+              <RekapView onOpenEditPanen={handleOpenEditPanen} />
             )}
 
             {activeTab === 'selisih' && (
